@@ -1,4 +1,4 @@
-# GUL v2.1 — C++ CLI
+# GUL — C++ CLI
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
@@ -79,3 +79,4 @@ Suitable for training models on GUL decision/confidence prediction.
 - Confidence values remain in [0, 1]
 - Deny dominates in decision combination
 - Jurisdiction checks use sub-jurisdiction relation
+
