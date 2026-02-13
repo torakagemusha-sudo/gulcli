@@ -1,16 +1,36 @@
-# GUL — C++ CLI
+# GUL CLI
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
-Executable: `gul.exe` (Windows) or 
+Executable: `gul.exe` 
+
+## Limitations 
+
+Currently only built for Windowsx64
+
+## Features
+
+- Can generate approx ~2Gb of dataset per minute.
+- Combines Normal, Modal, Deontic and Fuzzy logic into a [0-1] confidence value.
 
 ## Usage
+
+Open a terminal in the directory where gul.exe is located and run the below commands for the command set.
+
+'''
+gul -h
+'''
+or
+'''
+gul --help
+'''
 
 ### Dataset streaming (ML training)
 
 - **Stream to stdout (training format, JSON Lines):**
   ```bash
   gul -oneshot -T
+  
   gul -T -n 1000
   gul -config sample.conf -T -random -block 32
   ```
@@ -79,4 +99,5 @@ Suitable for training models on GUL decision/confidence prediction.
 - Confidence values remain in [0, 1]
 - Deny dominates in decision combination
 - Jurisdiction checks use sub-jurisdiction relation
+
 
