@@ -1,103 +1,105 @@
 # GUL CLI
 
-Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
+GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and running placeholder `validate`/`infer` commands.
 
-Executable: `gul.exe` 
+## Platform and Setup
 
-## Limitations 
+- Binary format: Windows PE x86-64 (`gul.exe`).
+- Native support: Windows x64.
+- Linux/macOS: run with a Windows compatibility layer (for example, Wine), or from a Windows environment.
 
-Currently only built for Windowsx64
+Quick help:
 
-## Features
-
-- Can generate approx ~2Gb of dataset per minute.
-- Combines Normal, Modal, Deontic and Fuzzy logic into a [0-1] confidence value.
-
-## Usage
-
-Open a terminal in the directory where gul.exe is located and run the below commands for the command set.
-
-'''
+```bash
 gul -h
-'''
-or
-'''
 gul --help
-'''
+```
 
-### Dataset streaming (ML training)
+## Public CLI Interface
 
-- **Stream to stdout (training format, JSON Lines):**
-  ```bash
-  gul -oneshot -T
-  
-  gul -T -n 1000
-  gul -config sample.conf -T -random -block 32
-  ```
+Usage reported by the executable:
 
-- **Stream to TCP listener (e.g. training server):**
-  ```bash
-  gul -deepgul -L 127.0.0.1/1234
-  gul -oneshot -T -L 127.0.0.1/1234 -n 500
-  ```
+```text
+Usage: gul [options] [command] [args]
+```
 
-### Options
+Options and commands:
 
-| Option | Description |
-|--------|-------------|
-| `-config <path>` | Load config file (key=value or key: value) |
-| `-oneshot` | Single-batch mode |
-| `-T` | Stream dataset to stdout (training format) |
+| Option / Command | Description |
+|---|---|
+| `-oneshot` | Single batch mode |
+| `-T` | Stream dataset to stdout (JSON Lines training format) |
 | `-deepgul` | Enable deep GUL streaming |
-| `-L <host/port>` | Stream to TCP (e.g. `127.0.0.1/1234` or `127.0.0.1:1234`) |
-| `-n, --limit <N>` | Limit to N samples |
-| `-random` | Randomize sample order |
-| `-block <N>` | Block size for streaming (default 64) |
-| `-seed <N>` | RNG seed (0 = random) |
-| `validate [file]` | Validate GUL spec file |
-| `infer [file]` | Run inference on expression file |
+| `-L <host/port>` | Stream to TCP (example: `127.0.0.1/1234` or `127.0.0.1:1234`) |
+| `-n, --limit <N>` | Limit to `N` samples |
+| `-random, --random` | Randomize sample order |
+| `-block, --block <N>` | Block size for streaming (default: `64`) |
+| `-seed, --seed <N>` | RNG seed (`0` means random) |
+| `-config, --config <path>` | Load config file (`key=value` or `key: value`) |
+| `validate [file]` | Validate GUL spec file (currently placeholder behavior) |
+| `infer [file]` | Run inference from expression file (currently placeholder behavior) |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 
-### Config file format
+## Operational Runbooks
 
-Plain text, one key per line:
+### Stream to stdout (JSONL)
 
+Use this when a trainer or script reads from standard output.
+
+```bash
+gul -oneshot -T
+gul -T -n 1000
+gul -config train.conf -random -block 32 -T
 ```
+
+### Stream to a TCP consumer
+
+Use this when a remote/local service ingests samples from a socket.
+
+```bash
+gul -deepgul -L 127.0.0.1/1234
+gul -oneshot -T -L 127.0.0.1/1234 -n 500
+```
+
+### Config-driven runs
+
+Sample config:
+
+```ini
 seed = 42
 block_size = 64
 max_samples = 10000
 random_order = true
 ```
 
-### Dataset format (JSON Lines)
+Then run:
 
-Each line is a JSON object with:
+```bash
+gul -config train.conf -T
+```
 
-- `entity`: `{ "kind", "id" }`
-- `predicate`: `{ "tag", "args" }`
-- `context_confidence`: number
-- `decision`: `"permit"` | `"deny"` | `"defer"` | `"abstain"`
-- `confidence`: number in [0, 1]
-- `evidence`: array of strings
+## Dataset Shape and Constraints
 
-Suitable for training models on GUL decision/confidence prediction.
+Streaming output is JSON Lines. Observed fields include:
 
-## Core types (C++)
+- `entity` object with `kind` and `id`
+- `predicate` object with `tag` and `args`
+- `context_confidence`
+- `decision` in `permit | deny | defer | abstain`
+- `confidence`
+- `evidence`
 
-- **Confidence** — bounded [0, 1] lattice; union, intersection, sequential, parallel
-- **Decision** — permit, deny, defer, abstain; combiners
-- **Entity** — agent, resource, context, policy
-- **Predicate** — belongs_to, has_role, has_attribute, in_context, time_before/after, custom
-- **PolicyExpr** — atom, and_, or_, not_, implies, with_confidence, always, eventually, until
-- **JurisdictionId** — hierarchical scope
-- **GULInferenceEngine** — AND, OR, sequential, parallel, NOT, threshold, jurisdiction check
-- **DatasetGenerator** — samples for ML; stream to stdout or TCP
+Constraints:
 
-## Invariants
+- Confidence values are expected in `[0, 1]` (the executable includes a `Confidence must be in [0,1]` constraint message).
+- Treat each output line as an independent JSON document.
 
-- Confidence values remain in [0, 1]
-- Deny dominates in decision combination
-- Jurisdiction checks use sub-jurisdiction relation
+## Troubleshooting and Pitfalls
 
-
+- `gul: command not found`: invoke `gul.exe` directly or add its directory to `PATH`.
+- No native execution on Linux/macOS: use a Windows runtime/compatibility layer.
+- No data received on TCP: verify listener is up and `-L` endpoint format is correct.
+- Unexpected sample count: check `-n/--limit` and config (`max_samples`) interactions.
+- Non-reproducible runs: set explicit `-seed` value (avoid `0` when determinism is required).
+- `validate`/`infer` expectations: current help text marks these as placeholder flows.
