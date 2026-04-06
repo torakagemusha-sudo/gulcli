@@ -1,23 +1,46 @@
 # GUL CLI
 
-GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and running placeholder `validate`/`infer` commands.
+GUL CLI is a pre-compiled Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and running placeholder `validate`/`infer` commands.
+
+## Repository Scope
+
+This is a binary distribution repository:
+
+- No source code.
+- No build system.
+- No package manifests.
+- No automated test suite.
 
 ## Platform and Setup
 
 - Binary format: Windows PE x86-64 (`gul.exe`).
 - Native support: Windows x64.
-- Linux/macOS: run with a Windows compatibility layer (for example, Wine), or from a Windows environment.
+- Linux/macOS: run through Wine.
 
-Quick help:
+### Prerequisites
+
+- Windows: no extra runtime required.
+- Linux/macOS: Wine must be installed and available on `PATH`.
+
+### Invocation Patterns
+
+Windows (PowerShell/CMD):
 
 ```bash
-gul -h
-gul --help
+gul.exe --help
+gul.exe --version
+```
+
+Linux/macOS via Wine:
+
+```bash
+WINEDEBUG=-all DISPLAY= wine gul.exe --help
+WINEDEBUG=-all DISPLAY= wine gul.exe --version
 ```
 
 ## Public CLI Interface
 
-Usage reported by the executable:
+Usage string embedded in the executable:
 
 ```text
 Usage: gul [options] [command] [args]
@@ -48,9 +71,9 @@ Options and commands:
 Use this when a trainer or script reads from standard output.
 
 ```bash
-gul -oneshot -T
-gul -T -n 1000
-gul -config train.conf -random -block 32 -T
+WINEDEBUG=-all DISPLAY= wine gul.exe -oneshot -T
+WINEDEBUG=-all DISPLAY= wine gul.exe -T -n 1000
+WINEDEBUG=-all DISPLAY= wine gul.exe -config train.conf -random -block 32 -T
 ```
 
 ### Stream to a TCP consumer
@@ -58,8 +81,8 @@ gul -config train.conf -random -block 32 -T
 Use this when a remote/local service ingests samples from a socket.
 
 ```bash
-gul -deepgul -L 127.0.0.1/1234
-gul -oneshot -T -L 127.0.0.1/1234 -n 500
+WINEDEBUG=-all DISPLAY= wine gul.exe -deepgul -L 127.0.0.1/1234
+WINEDEBUG=-all DISPLAY= wine gul.exe -oneshot -T -L 127.0.0.1/1234 -n 500
 ```
 
 ### Config-driven runs
@@ -76,7 +99,7 @@ random_order = true
 Then run:
 
 ```bash
-gul -config train.conf -T
+WINEDEBUG=-all DISPLAY= wine gul.exe -config train.conf -T
 ```
 
 ## Dataset Shape and Constraints
@@ -97,9 +120,15 @@ Constraints:
 
 ## Troubleshooting and Pitfalls
 
-- `gul: command not found`: invoke `gul.exe` directly or add its directory to `PATH`.
-- No native execution on Linux/macOS: use a Windows runtime/compatibility layer.
+- `wine: command not found`: install Wine, then re-run using `WINEDEBUG=-all DISPLAY= wine gul.exe ...`.
+- `gul.exe: command not found` on Windows: run from the binary directory or add that directory to `PATH`.
+- No native execution on Linux/macOS: use Wine or run in Windows.
 - No data received on TCP: verify listener is up and `-L` endpoint format is correct.
 - Unexpected sample count: check `-n/--limit` and config (`max_samples`) interactions.
 - Non-reproducible runs: set explicit `-seed` value (avoid `0` when determinism is required).
 - `validate`/`infer` expectations: current help text marks these as placeholder flows.
+
+## Verification Notes
+
+- In this repository, interface details are verified against strings embedded in `gul.exe`.
+- Runtime command validation requires a host with Wine (or Windows native execution).
