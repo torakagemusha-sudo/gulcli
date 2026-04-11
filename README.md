@@ -1,6 +1,11 @@
 # GUL CLI
 
-GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and running placeholder `validate`/`infer` commands.
+GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and exposing placeholder `validate`/`infer` commands.
+
+This repository is a distribution repository:
+
+- It ships a precompiled binary (`gul.exe`).
+- It does not include source code, build scripts, or automated tests.
 
 ## Platform and Setup
 
@@ -8,16 +13,19 @@ GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready da
 - Native support: Windows x64.
 - Linux/macOS: run with a Windows compatibility layer (for example, Wine), or from a Windows environment.
 
-Quick help:
+Use platform-specific invocation:
 
 ```bash
-gul -h
-gul --help
+# Windows (PowerShell/CMD)
+.\gul.exe --help
+
+# Linux/macOS (Wine)
+WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
 ```
 
 ## Public CLI Interface
 
-Usage reported by the executable:
+Usage reported by the executable strings:
 
 ```text
 Usage: gul [options] [command] [args]
@@ -48,9 +56,9 @@ Options and commands:
 Use this when a trainer or script reads from standard output.
 
 ```bash
-gul -oneshot -T
-gul -T -n 1000
-gul -config train.conf -random -block 32 -T
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -T -n 1000
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -config train.conf -random -block 32 -T
 ```
 
 ### Stream to a TCP consumer
@@ -58,8 +66,12 @@ gul -config train.conf -random -block 32 -T
 Use this when a remote/local service ingests samples from a socket.
 
 ```bash
-gul -deepgul -L 127.0.0.1/1234
-gul -oneshot -T -L 127.0.0.1/1234 -n 500
+# Example listener first (Linux/macOS):
+nc -l 1234
+
+# Then start producer:
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -deepgul -L 127.0.0.1/1234
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T -L 127.0.0.1/1234 -n 500
 ```
 
 ### Config-driven runs
@@ -76,12 +88,28 @@ random_order = true
 Then run:
 
 ```bash
-gul -config train.conf -T
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -config train.conf -T
 ```
+
+## Binary Update Verification Checklist
+
+Run these checks whenever `gul.exe` is replaced:
+
+```bash
+WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
+WINEDEBUG=-all DISPLAY= wine ./gul.exe --version
+WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T -n 1
+```
+
+Expected outcomes:
+
+- `--help` prints usage and option list.
+- `--version` prints a semantic-style version string.
+- `-oneshot -T -n 1` emits one JSON line sample.
 
 ## Dataset Shape and Constraints
 
-Streaming output is JSON Lines. Observed fields include:
+Streaming output is JSON Lines. Runtime samples have included:
 
 - `entity` object with `kind` and `id`
 - `predicate` object with `tag` and `args`
@@ -97,7 +125,8 @@ Constraints:
 
 ## Troubleshooting and Pitfalls
 
-- `gul: command not found`: invoke `gul.exe` directly or add its directory to `PATH`.
+- `wine: command not found` on Linux/macOS: install Wine or run from Windows.
+- `gul: command not found`: invoke `./gul.exe` directly (Windows) or through Wine.
 - No native execution on Linux/macOS: use a Windows runtime/compatibility layer.
 - No data received on TCP: verify listener is up and `-L` endpoint format is correct.
 - Unexpected sample count: check `-n/--limit` and config (`max_samples`) interactions.
