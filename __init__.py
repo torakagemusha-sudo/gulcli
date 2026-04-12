@@ -1,6 +1,7 @@
 """
 Governed Uncertainty Logic (GUL) v2.1
 
+
 Core IP implementation for geodesic_ai framework.
 Provides:
 - Confidence lattice with bounded [0,1] values and algebraic operations
@@ -11,6 +12,8 @@ Provides:
 
 Patent Note: GUL v2.1 is core IP - all implementation stays local.
 """
+
+__version__ = "2.1.0"
 
 from .confidence import Confidence, ConfidenceOps
 from .decision import Decision, EvaluatedDecision, DecisionCombiner
