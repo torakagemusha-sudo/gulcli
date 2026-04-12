@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gul.predicate/1",
+  "title": "GUL Predicate v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["tag"],
+  "properties": {
+    "tag": {
+      "type": "string",
+      "enum": [
+        "belongs_to",
+        "has_role",
+        "has_attribute",
+        "in_context",
+        "time_before",
+        "time_after",
+        "custom"
+      ]
+    }
+  }
+}
