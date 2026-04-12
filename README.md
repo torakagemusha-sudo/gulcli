@@ -1,82 +1,182 @@
-# GUL CLI
+# GUL — Governed Uncertainty Logic v2.1
 
-GUL CLI is a Windows x64 command-line tool (`gul.exe`) for streaming ML-ready dataset samples and exposing placeholder `validate`/`infer` commands.
+A formal logic system for policy evaluation under uncertainty. GUL provides a 4-valued decision algebra (`permit`, `deny`, `defer`, `abstain`) with bounded confidence values, jurisdiction scoping, and full audit trails.
 
-This repository is a distribution repository:
+This repository contains:
+- **Python package** — pure-Python implementation of the GUL type system, inference engine, and policy evaluation
+- **C++ CLI** (`gul.exe`) — high-performance dataset streamer for generating ML training data from the GUL formal system
 
-- It ships a precompiled binary (`gul.exe`).
-- It does not include source code, build scripts, or automated tests.
+---
 
-## Platform and Setup
+## Core Concepts
 
-- Binary format: Windows PE x86-64 (`gul.exe`).
-- Native support: Windows x64.
-- Linux/macOS: run with a Windows compatibility layer (for example, Wine), or from a Windows environment.
+### Decisions (4-valued logic)
 
-Use platform-specific invocation:
+GUL extends boolean allow/deny with two additional outcomes:
 
-```bash
-# Windows (PowerShell/CMD)
-.\gul.exe --help
+| Decision | Meaning |
+|----------|---------|
+| `PERMIT` | Action allowed |
+| `DENY` | Action blocked |
+| `DEFER` | Insufficient confidence; escalate to higher authority |
+| `ABSTAIN` | Outside jurisdiction scope; policy does not apply |
 
-# Linux/macOS (Wine)
-WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
-```
+### Confidence
 
-## Public CLI Interface
+A bounded value in `[0, 1]` representing certainty in a decision. Four combination modes:
 
-Usage reported by the executable strings:
+| Mode | Formula | Use when |
+|------|---------|---------|
+| Union | `max(c1, c2)` | Either source is sufficient (OR) |
+| Intersection | `min(c1, c2)` | Both sources required (AND) |
+| Sequential | `c1 × c2` | Dependent reasoning; uncertainty compounds |
+| Parallel | `c1 + c2 − c1·c2` | Independent sources reinforce each other |
 
-```text
-Usage: gul [options] [command] [args]
-```
+### Jurisdiction
 
-Options and commands:
+Hierarchical authority scopes (`GLOBAL → REGIONAL → LOCAL → INSTANCE`). Policies declare a jurisdiction; requests outside that scope produce `ABSTAIN` rather than `DENY`.
 
-| Option / Command | Description |
-|---|---|
-| `-oneshot` | Single batch mode |
-| `-T` | Stream dataset to stdout (JSON Lines training format) |
-| `-deepgul` | Enable deep GUL streaming |
-| `-L <host/port>` | Stream to TCP (example: `127.0.0.1/1234` or `127.0.0.1:1234`) |
-| `-n, --limit <N>` | Limit to `N` samples |
-| `-random, --random` | Randomize sample order |
-| `-block, --block <N>` | Block size for streaming (default: `64`) |
-| `-seed, --seed <N>` | RNG seed (`0` means random) |
-| `-config, --config <path>` | Load config file (`key=value` or `key: value`) |
-| `validate [file]` | Validate GUL spec file (currently placeholder behavior) |
-| `infer [file]` | Run inference from expression file (currently placeholder behavior) |
-| `-h, --help` | Show help |
-| `-v, --version` | Show version |
+---
 
-## Operational Runbooks
+## Python Package
 
-### Stream to stdout (JSONL)
-
-Use this when a trainer or script reads from standard output.
+### Installation
 
 ```bash
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -T -n 1000
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -config train.conf -random -block 32 -T
+pip install -e .
 ```
 
-### Stream to a TCP consumer
+Requires Python 3.10+. No hard dependencies — the optional `geodesic_ai` integration is lazy-imported only when legacy adapters are used.
 
-Use this when a remote/local service ingests samples from a socket.
+### Quick start
+
+```python
+from gulcli import (
+    Confidence, Decision, EvaluatedDecision,
+    GULInferenceEngine, GULGovernancePolicy,
+)
+
+# 1. Direct inference
+engine = GULInferenceEngine()
+d1 = EvaluatedDecision(Decision.PERMIT, Confidence(0.9))
+d2 = EvaluatedDecision(Decision.PERMIT, Confidence(0.7))
+
+result = engine.evaluate_and(d1, d2)
+print(result.decision)          # Decision.PERMIT
+print(result.confidence.value)  # 0.7  (min of 0.9, 0.7)
+
+# 2. Policy evaluation
+policy = GULGovernancePolicy(max_risk=0.5, min_coherence=0.3, min_confidence=0.6)
+decision = policy.evaluate(risk_score=0.2, coherence=0.9)
+print(decision.ok)              # True
+print(decision.decision)        # Decision.PERMIT
+```
+
+### Inference rules
+
+`GULInferenceEngine` provides:
+
+```python
+engine.evaluate_and(d1, d2)             # AND: deny dominates; permit requires both
+engine.evaluate_or(d1, d2)              # OR: permit if either permits
+engine.evaluate_not(d)                  # NOT: PERMIT ↔ DENY; DEFER/ABSTAIN unchanged
+engine.evaluate_sequential(d1, d2)      # Dependent chain; confidence multiplies
+engine.evaluate_parallel(d1, d2)        # Independent sources; confidence reinforces
+engine.evaluate_conditional(cond, t, f) # If-then-else with confidence propagation
+engine.evaluate_threshold(d, 0.7)       # Require minimum confidence or DEFER
+engine.evaluate_all(decisions, "and")   # Fold over a list
+
+# Retrieve full audit trace
+engine.get_trace_summary()
+```
+
+### Policy expressions (DSL)
+
+```python
+from gulcli import Entity, and_, has_role, has_attribute
+
+user = Entity("agent", "user:alice")
+doc  = Entity("resource", "doc:report")
+
+expr = and_(
+    has_role(user, "editor"),
+    has_attribute(doc, "classification", "internal"),
+)
+print(expr.to_dict())
+```
+
+Available constructors: `atom`, `and_`, `or_`, `not_`, `implies`, `with_confidence`, `always`, `eventually`, `until`, `belongs_to`, `has_role`, `has_attribute`, `in_context`, `time_before`, `time_after`, `custom`.
+
+### Jurisdiction hierarchy
+
+```python
+from gulcli import create_jurisdiction_hierarchy
+
+root, regional, local = create_jurisdiction_hierarchy(
+    ["global", "eu-west", "eu-west.ireland"]
+)
+
+print(local.id.is_sub_jurisdiction(root.id))   # True
+print(root.id.is_sub_jurisdiction(local.id))   # False
+```
+
+### Legacy adapters
+
+```python
+from gulcli import legacy_decision_to_gul, legacy_policy_to_gul
+
+gul_decision = legacy_decision_to_gul(old_decision, confidence=0.85)
+gul_policy   = legacy_policy_to_gul(old_policy)
+```
+
+Requires `geodesic_ai` to be installed; raises `RuntimeError` otherwise.
+
+---
+
+## C++ CLI
+
+The C++ binary streams ML training samples from the GUL formal system as JSON Lines.
+
+### Build
 
 ```bash
-# Example listener first (Linux/macOS):
-nc -l 1234
-
-# Then start producer:
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -deepgul -L 127.0.0.1/1234
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T -L 127.0.0.1/1234 -n 500
+cd cpp
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release
+# Output: build/Release/gul.exe (Windows) or build/gul (Unix)
 ```
 
-### Config-driven runs
+### Dataset streaming
 
-Sample config:
+```bash
+# Stream to stdout
+gul -oneshot -T
+gul -T -n 1000
+gul -config sample.conf -random -block 32 -T
+
+# Stream to a TCP listener
+gul -deepgul -L 127.0.0.1/1234
+gul -oneshot -T -L 127.0.0.1/1234 -n 500
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-T` | Stream dataset to stdout (JSON Lines) |
+| `-oneshot` | Single-batch mode |
+| `-deepgul` | Deep GUL streaming |
+| `-n, --limit <N>` | Limit output to N samples |
+| `-random` | Randomize sample order |
+| `-block <N>` | Block size (default: 64) |
+| `-seed <N>` | RNG seed (0 = random) |
+| `-config <path>` | Load config file |
+| `-L <host/port>` | Stream to TCP (e.g. `127.0.0.1/1234`) |
+| `validate [file]` | Validate a GUL spec file |
+| `infer [file]` | Run inference on an expression file |
+
+### Config file
 
 ```ini
 seed = 42
@@ -85,50 +185,68 @@ max_samples = 10000
 random_order = true
 ```
 
-Then run:
+### Output format (JSON Lines)
 
-```bash
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -config train.conf -T
+Each line is an independent JSON document:
+
+```json
+{
+  "entity":             { "kind": "agent", "id": "user:42" },
+  "predicate":          { "tag": "has_role", "args": ["editor"] },
+  "context_confidence": 0.91,
+  "decision":           "permit",
+  "confidence":         0.83,
+  "evidence":           ["role check passed", "context verified"]
+}
 ```
 
-## Binary Update Verification Checklist
+Fields: `entity`, `predicate`, `context_confidence`, `decision` (`permit | deny | defer | abstain`), `confidence` ∈ [0, 1], `evidence`.
 
-Run these checks whenever `gul.exe` is replaced:
+### Python bridge
 
-```bash
-WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
-WINEDEBUG=-all DISPLAY= wine ./gul.exe --version
-WINEDEBUG=-all DISPLAY= wine ./gul.exe -oneshot -T -n 1
+`cli_bridge.py` wraps the binary for use from Python:
+
+```python
+from gulcli import generate_dataset, stream_dataset, cli_validate, cli_infer
+from pathlib import Path
+import json
+
+# Write 1000 samples to a file
+generate_dataset(1000, output_path=Path("data/train.jsonl"), seed=42)
+
+# Stream lazily
+for line in stream_dataset(n=500, random_order=True):
+    record = json.loads(line)
+
+# Validate / infer
+ok = cli_validate(Path("policy.gul"))
+result = cli_infer(Path("expr.gul"))
 ```
 
-Expected outcomes:
+The executable is resolved in order: `GUL_EXE_PATH` env var → `gul_exe_path` argument → `cpp/build/Release/gul.exe` → PATH.
 
-- `--help` prints usage and option list.
-- `--version` prints a semantic-style version string.
-- `-oneshot -T -n 1` emits one JSON line sample.
+---
 
-## Dataset Shape and Constraints
+## Module Overview
 
-Streaming output is JSON Lines. Runtime samples have included:
+| Module | Description |
+|--------|-------------|
+| `confidence.py` | `Confidence` value type + `ConfidenceOps` (union, intersection, sequential, parallel) |
+| `decision.py` | `Decision` enum + `EvaluatedDecision` + `DecisionCombiner` |
+| `jurisdiction.py` | `JurisdictionLevel`, `JurisdictionId`, `Jurisdiction`, `JType` |
+| `inference.py` | `GULInferenceEngine` — all inference rules with audit trace |
+| `policy.py` | `GULGovernanceDecision` + `GULGovernancePolicy` |
+| `expr.py` | Policy expression DSL (`Entity`, `Predicate`, `PolicyExpr`) |
+| `compiler.py` | Compiles `PolicyExpr` / `Predicate` to constraint lattice |
+| `integration.py` | Legacy `geodesic_ai` adapters |
+| `cli_bridge.py` | Python wrapper around `gul.exe` |
 
-- `entity` object with `kind` and `id`
-- `predicate` object with `tag` and `args`
-- `context_confidence`
-- `decision` in `permit | deny | defer | abstain`
-- `confidence`
-- `evidence`
+---
 
-Constraints:
+## Invariants
 
-- Confidence values are expected in `[0, 1]` (the executable includes a `Confidence must be in [0,1]` constraint message).
-- Treat each output line as an independent JSON document.
-
-## Troubleshooting and Pitfalls
-
-- `wine: command not found` on Linux/macOS: install Wine or run from Windows.
-- `gul: command not found`: invoke `./gul.exe` directly (Windows) or through Wine.
-- No native execution on Linux/macOS: use a Windows runtime/compatibility layer.
-- No data received on TCP: verify listener is up and `-L` endpoint format is correct.
-- Unexpected sample count: check `-n/--limit` and config (`max_samples`) interactions.
-- Non-reproducible runs: set explicit `-seed` value (avoid `0` when determinism is required).
-- `validate`/`infer` expectations: current help text marks these as placeholder flows.
+- Confidence values are always in `[0, 1]`; construction outside this range raises `ValueError`
+- `DENY` dominates in AND combination
+- `PERMIT` dominates in OR combination
+- Jurisdiction checks produce `ABSTAIN`, never `DENY`
+- Decision history is append-only; `reset_history()` is explicit
