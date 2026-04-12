@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gul.validation.result/1",
+  "title": "GUL Validation Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "source",
+    "ok",
+    "errors",
+    "normalized",
+    "input_hash"
+  ],
+  "properties": {
+    "schema": {"const": "gul.validation.result/1"},
+    "version": {"type": "string"},
+    "source": {"type": "string"},
+    "ok": {"type": "boolean"},
+    "input_hash": {"type": "string", "minLength": 32},
+    "normalized": {},
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "code", "severity", "message"],
+        "additionalProperties": true,
+        "properties": {
+          "path": {"type": "string"},
+          "code": {"type": "string"},
+          "severity": {"type": "string", "enum": ["error", "warning"]},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  }
+}
