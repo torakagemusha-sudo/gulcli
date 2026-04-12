@@ -1,0 +1,21 @@
+{
+  "expr": {
+    "tag": "threshold",
+    "threshold": 0.7,
+    "p": {
+      "tag": "and_",
+      "p1": {
+        "tag": "decision",
+        "decision": "permit",
+        "confidence": 0.92,
+        "evidence": ["role check passed"]
+      },
+      "p2": {
+        "tag": "decision",
+        "decision": "permit",
+        "confidence": 0.81,
+        "evidence": ["context verified"]
+      }
+    }
+  }
+}
