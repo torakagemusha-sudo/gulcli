@@ -11,6 +11,7 @@ Requires gul/cpp to be built; set GUL_EXE_PATH or ensure gul is on PATH.
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -143,20 +144,27 @@ def stream_dataset(
 
 def validate(spec_path: Path, gul_exe_path: Optional[str] = None, cwd: Optional[Path] = None) -> bool:
     """
-    Validate a GUL spec file. Runs: gul validate <spec_path>.
+    Validate a GUL spec file.
 
-    Returns:
-        True if validation succeeded (exit 0), False otherwise.
+    Tries the native GUL CLI first when it can be started; if the executable is
+    missing or cannot be launched, falls back to the pure-Python runtime
+    (`runtime_io.validate_file`).
     """
     exe = find_gul_exe(gul_exe_path)
     cmd = [exe, "validate", str(spec_path)]
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(cwd) if cwd else None,
-        timeout=30,
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(cwd) if cwd else None,
+            timeout=30,
+        )
+    except (FileNotFoundError, OSError):
+        from . import runtime_io
+
+        out = runtime_io.validate_file(spec_path)
+        return bool(out["ok"])
     return result.returncode == 0
 
 
@@ -166,17 +174,30 @@ def infer(
     cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
     """
-    Run inference on an expression file. Runs: gul infer <spec_path>.
+    Run inference on an expression file.
 
-    Returns:
-        CompletedProcess; check .returncode and .stdout / .stderr.
+    Tries `gul infer <spec_path>` first when the CLI can be started; if the
+    executable is missing or cannot be launched, falls back to the pure-Python
+    runtime and returns a CompletedProcess with returncode 0 and JSON in stdout
+    (same shape as `runtime_io.infer_file` without trace).
     """
     exe = find_gul_exe(gul_exe_path)
     cmd = [exe, "infer", str(spec_path)]
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(cwd) if cwd else None,
-        timeout=30,
-    )
+    try:
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(cwd) if cwd else None,
+            timeout=30,
+        )
+    except (FileNotFoundError, OSError):
+        from . import runtime_io
+
+        payload = runtime_io.infer_file(spec_path, include_trace=False)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=json.dumps(payload, sort_keys=True),
+            stderr="",
+        )

@@ -13,7 +13,7 @@ Provides:
 Patent Note: GUL v2.1 is core IP - all implementation stays local.
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0-dev0"
 
 from .confidence import Confidence, ConfidenceOps
 from .decision import Decision, EvaluatedDecision, DecisionCombiner
@@ -61,6 +61,12 @@ from .compiler import (
     compile_predicate_to_constraint,
     compile_policy_expr_to_constraints,
     build_lattice_from_gul_spec,
+)
+from .runtime_io import (
+    evaluate_expr_data,
+    infer_file,
+    validate_file,
+    validate_spec_data,
 )
 from .cli_bridge import (
     find_gul_exe,
@@ -122,6 +128,11 @@ __all__ = [
     "compile_predicate_to_constraint",
     "compile_policy_expr_to_constraints",
     "build_lattice_from_gul_spec",
+    # Executable runtime (JSON specs)
+    "validate_spec_data",
+    "evaluate_expr_data",
+    "validate_file",
+    "infer_file",
     # CLI bridge
     "find_gul_exe",
     "generate_dataset",

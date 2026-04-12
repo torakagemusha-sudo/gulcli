@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gulcli"
-version = "2.1.0"
+version = "2.2.0-dev0"
 description = "Governed Uncertainty Logic — 4-valued policy decision algebra with confidence tracking and jurisdiction scoping"
 readme = "README.md"
 requires-python = ">=3.10"
