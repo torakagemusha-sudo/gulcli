@@ -1,1 +1,0 @@
-"C:\Users\Thomas\Desktop\script-automation\gul\cpp\build\Release\gul.exe" -oneshot -T > "C:\Users\Thomas\Desktop\script-automation\ai-models\geodesic_ai\data\sample.txt"
