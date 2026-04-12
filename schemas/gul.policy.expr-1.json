@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gul.policy.expr/1",
+  "title": "GUL Policy Expression v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["tag"],
+  "properties": {
+    "tag": {
+      "type": "string",
+      "enum": [
+        "decision",
+        "atom",
+        "and_",
+        "or_",
+        "not_",
+        "implies",
+        "with_confidence",
+        "threshold",
+        "jurisdiction",
+        "override",
+        "sequential",
+        "parallel",
+        "always",
+        "eventually",
+        "until"
+      ]
+    }
+  }
+}
