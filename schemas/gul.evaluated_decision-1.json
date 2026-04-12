@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gul.evaluated_decision/1",
+  "title": "GUL Evaluated Decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "confidence", "evidence"],
+  "properties": {
+    "decision": {"$ref": "./gul.decision-1.json"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "evidence": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "jurisdiction": {"type": ["string", "null"]}
+  }
+}
