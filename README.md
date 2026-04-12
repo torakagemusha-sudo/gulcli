@@ -1,4 +1,4 @@
-# GUL — Governed Uncertainty Logic v2.1
+# GUL — Governed Uncertainty Logic v2.2
 
 GUL is a formal logic system for policy evaluation under uncertainty. It extends classical binary allow/deny into a **4-valued decision algebra** — `permit`, `deny`, `defer`, `abstain` — with bounded confidence tracking, hierarchical jurisdiction scoping, and a full inference audit trail.
 
@@ -19,6 +19,7 @@ The system is grounded in a Lean formal specification (`GUL.lean`, `Inference.le
 - [Python Package](#python-package)
   - [Installation](#installation)
   - [Quick start](#quick-start)
+  - [Executable Python runtime](#executable-python-runtime)
   - [Inference engine](#inference-engine)
   - [Policy evaluation](#policy-evaluation)
   - [Policy expression DSL](#policy-expression-dsl)
@@ -174,6 +175,17 @@ print(decision.decision)        # Decision.PERMIT
 print(decision.evidence)        # ['all thresholds satisfied']
 print(decision.to_dict())       # full serializable record
 ```
+
+### Executable Python runtime
+
+JSON spec files under `examples/specs/` validate and run inference without the C++ binary. Use the package entrypoint:
+
+```bash
+python -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+```
+
+The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). When the native `gul` CLI is installed, `cli_validate` / `cli_infer` try it first and fall back to this runtime if the executable cannot be started.
 
 ### Inference engine
 
@@ -623,7 +635,8 @@ print(result.returncode, result.stdout, result.stderr)
 | `expr.py` | `Entity`, `Predicate`, `PolicyExpr`, DSL constructors | JSON-serializable AST for policy expressions; mirrors GUL.lean |
 | `compiler.py` | `default_registry`, `compile_predicate_to_constraint`, `compile_policy_expr_to_constraints`, `build_lattice_from_gul_spec` | Compiles `PolicyExpr` → `geodesic_ai` `Constraint` objects; checkpoint loading |
 | `integration.py` | `GULAdapter`, `legacy_decision_to_gul`, `legacy_policy_to_gul`, `constraint_with_confidence`, `lattice_with_uniform_confidence`, `evaluate_constraint_with_gul`, `evaluate_lattice_with_gul`, `create_jurisdiction_hierarchy` | Full bridge between GUL types and `geodesic_ai` constraint/policy ecosystem |
-| `cli_bridge.py` | `find_gul_exe`, `generate_dataset`, `stream_dataset`, `cli_validate`, `cli_infer` | Subprocess wrapper around `gul.exe` |
+| `runtime_io.py` | `validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file` | JSON spec validation and inference; powers `python -m gulcli` |
+| `cli_bridge.py` | `find_gul_exe`, `generate_dataset`, `stream_dataset`, `cli_validate`, `cli_infer` | Subprocess wrapper around `gul`; validate/infer fall back to `runtime_io` when the CLI is unavailable |
 
 ---
 
