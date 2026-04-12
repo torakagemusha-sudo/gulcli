@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gul.inference.result/1",
+  "title": "GUL Inference Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "input_hash",
+    "decision",
+    "confidence",
+    "evidence",
+    "trace"
+  ],
+  "properties": {
+    "schema": {"const": "gul.inference.result/1"},
+    "version": {"type": "string"},
+    "input_hash": {"type": "string", "minLength": 32},
+    "decision": {"type": "string", "enum": ["permit", "deny", "defer", "abstain"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "jurisdiction": {"type": ["string", "null"]},
+    "evidence": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule", "inputs", "output", "metadata"],
+        "additionalProperties": true,
+        "properties": {
+          "rule": {"type": "string"},
+          "inputs": {"type": "array"},
+          "output": {"type": "object"},
+          "metadata": {"type": "object"}
+        }
+      }
+    }
+  }
+}
