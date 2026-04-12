@@ -1,0 +1,22 @@
+{
+  "expr": {
+    "tag": "override",
+    "base": {
+      "tag": "jurisdiction",
+      "required": "org.root.teamA",
+      "request": "org.root.teamB",
+      "p": {
+        "tag": "decision",
+        "decision": "deny",
+        "confidence": 0.62,
+        "evidence": ["team-local policy denied"]
+      }
+    },
+    "override": {
+      "tag": "decision",
+      "decision": "permit",
+      "confidence": 0.91,
+      "evidence": ["higher authority override"]
+    }
+  }
+}
