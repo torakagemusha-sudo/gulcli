@@ -1,21 +1,33 @@
 # GUL Runtime Usage
 
-This document describes the executable Python runtime path added during the `v2.2.0` upgrade work.
+This runbook covers the executable JSON runtime in `gulcli.runtime_io` and the package CLI entrypoint in `python -m gulcli`.
 
-It is the fastest available route to real file-backed validation and inference while the C++ CLI surface is still being upgraded.
+Use this path when you need deterministic file-backed `validate`/`infer` behavior from Python, including in environments where the native `gul` binary is unavailable.
 
 ---
 
-## Entry points
+## Setup
 
-### Package entry point
+Install the package first:
+
+```bash
+python -m pip install -e .
+```
+
+If your environment does not provide `python`, use `python3` for all commands in this document.
+
+---
+
+## Entry Points
+
+Recommended command surface:
 
 ```bash
 python -m gulcli validate examples/specs/basic_infer.gul.json --format json
 python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
-### Direct module entry point
+Direct module entrypoint (equivalent behavior):
 
 ```bash
 python -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
@@ -24,9 +36,9 @@ python -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format j
 
 ---
 
-## Supported JSON expression tags
+## JSON Expression Coverage
 
-The runtime currently supports these executable tags:
+### Executable tags
 
 - `decision`
 - `and_`
@@ -43,71 +55,69 @@ The runtime currently supports these executable tags:
 - `eventually`
 - `until`
 
-`atom` nodes are structurally validated but are not directly executable yet without a fact environment.
+### Validation-only tag
+
+- `atom` is structurally validated but is not executable without an external fact environment.
 
 ---
 
-## Validation output
+## Runtime Semantics Highlights
 
-Validation emits a machine-readable envelope shaped as `gul.validation.result/1`.
-
-Example fields:
-
-- `schema`
-- `version`
-- `source`
-- `ok`
-- `errors`
-- `normalized`
-- `input_hash`
+- `threshold` preserves the input decision only when `confidence >= threshold`; otherwise output is `defer`.
+- `jurisdiction` returns the inner result when `request == required` or `request` is a dotted child of `required`; otherwise output is `abstain` with confidence `1.0`.
+- `override` applies `DecisionCombiner.override(base, override)`.
+- `override` keeps the base confidence when override decision is `abstain`; otherwise confidence is union-combined (`max(base, override)`).
+- `until` is currently evaluated as a sequential approximation.
 
 ---
 
-## Inference output
+## Output Contracts
 
-Inference emits a machine-readable envelope shaped as `gul.inference.result/1`.
+Validation output shape:
 
-Example fields:
+- schema: `gul.validation.result/1`
+- key fields: `source`, `ok`, `errors`, `normalized`, `input_hash`, `version`
 
-- `schema`
-- `version`
-- `input_hash`
-- `decision`
-- `confidence`
-- `evidence`
-- `jurisdiction`
-- `trace`
+Inference output shape:
 
----
+- schema: `gul.inference.result/1`
+- key fields: `decision`, `confidence`, `evidence`, `jurisdiction`, `trace`, `input_hash`, `version`
 
-## Example executable spec
-
-See:
+Example spec used by tests and docs:
 
 ```text
 examples/specs/basic_infer.gul.json
 ```
 
-This example composes two `permit` decisions through `and_` and then applies a confidence threshold.
-
 ---
 
-## Python usage
+## Python API Usage
 
 ```python
 from pathlib import Path
-from gulcli.runtime_io import validate_file, infer_file
+from gulcli import validate_file, infer_file
 
-validation = validate_file(Path("examples/specs/basic_infer.gul.json"))
-result = infer_file(Path("examples/specs/basic_infer.gul.json"), include_trace=True)
+spec = Path("examples/specs/basic_infer.gul.json")
+validation = validate_file(spec)
+result = infer_file(spec, include_trace=True)
 ```
 
 ---
 
-## Current limitations
+## CLI Bridge Fallback Workflow
 
-- the existing C++ `validate` / `infer` path is still separate from this Python runtime
-- `atom` execution requires a future fact environment or evaluator backend
-- the public package `__init__` surface has not yet been rewired to re-export runtime helpers
+`cli_validate` and `cli_infer` in `cli_bridge.py` first attempt the native `gul` executable and then fall back to the Python runtime only when the executable cannot be started (`FileNotFoundError` or `OSError`).
 
-This document exists so the executable capability is discoverable immediately, even before the remaining surface unification work lands.
+This means:
+
+- missing binary: fallback runs automatically
+- binary starts but returns an error code: fallback is not used
+
+---
+
+## Troubleshooting
+
+- `python: command not found`: rerun with `python3`.
+- `No module named gulcli`: install in the current environment with `python -m pip install -e .`.
+- `atom nodes are structural only`: replace `atom` with executable decision expressions, or evaluate with a fact-aware backend.
+- `RuntimeWarning` from `python -m gulcli.runtime_io`: prefer `python -m gulcli` when possible.
