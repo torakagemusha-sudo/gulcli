@@ -11,21 +11,23 @@ It is the current route to real file-backed validation and inference. The native
 Install the package before using module entry points:
 
 ```bash
-python -m pip install -e .
+python3 -m pip install -e .
 ```
+
+Use the Python 3 executable name for your platform. In CI that may be `python`; on this Linux image it is `python3`.
 
 ### Package entry point
 
 ```bash
-python -m gulcli validate examples/specs/basic_infer.gul.json --format json
-python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
 ### Direct module entry point
 
 ```bash
-python -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
-python -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
+python3 -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
+python3 -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
 ---

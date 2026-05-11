@@ -137,10 +137,10 @@ Five jurisdiction types for constraint composition:
 ### Installation
 
 ```bash
-pip install -e .
+python3 -m pip install -e .
 ```
 
-Requires Python 3.10+. The package has **no mandatory dependencies**. The `geodesic_ai` integration and `torch`-backed compiler are lazy-imported only when their respective functions are called, and fail with a clear `RuntimeError` if that package is not installed.
+Requires Python 3.10+. Use the Python 3 executable name for your platform (`python3` on this Linux image, often `python` in CI). The package has **no mandatory dependencies**. The `geodesic_ai` integration and `torch`-backed compiler are lazy-imported only when their respective functions are called, and fail with a clear `RuntimeError` if that package is not installed.
 
 ### Quick start
 
@@ -181,8 +181,8 @@ print(decision.to_dict())       # full serializable record
 JSON spec files under `examples/specs/` validate and run inference without the C++ binary. Use the package entrypoint:
 
 ```bash
-python -m gulcli validate examples/specs/basic_infer.gul.json --format json
-python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
 The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). Use these helpers when you need guaranteed Python runtime semantics. `cli_validate` / `cli_infer` are bridge helpers that try a native `gul` executable first and fall back to this runtime only if that executable cannot be started.
@@ -526,7 +526,7 @@ gul -deepgul -L 127.0.0.1/1234
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
 ```
 
-Native `gul validate` and `gul infer` are currently placeholders in `cpp/src/cli.cpp`. Use `python -m gulcli validate ...` and `python -m gulcli infer ...` for real file-backed validation and inference.
+Native `gul validate` and `gul infer` are currently placeholders in `cpp/src/cli.cpp`. Use `python3 -m gulcli validate ...` and `python3 -m gulcli infer ...` for real file-backed validation and inference.
 
 ### CLI options
 

@@ -2,7 +2,7 @@
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
-The native CLI currently provides dataset streaming. `validate` and `infer` are accepted by the command parser but still print placeholders; use the Python runtime (`python -m gulcli validate ...`, `python -m gulcli infer ...`) for real file-backed validation and inference.
+The native CLI currently provides dataset streaming. `validate` and `infer` are accepted by the command parser but still print placeholders; use the Python runtime (`python3 -m gulcli validate ...`, `python3 -m gulcli infer ...`) for real file-backed validation and inference.
 
 ## Build
 

@@ -19,17 +19,17 @@ The current tree is not binary-only. It includes:
 Install the package in editable mode before running module entry points:
 
 ```bash
-python -m pip install -e .
+python3 -m pip install -e .
 ```
 
 Key Python commands:
 
 | Command | Purpose |
 |---------|---------|
-| `python -m unittest tests.test_runtime_io` | Run runtime validation/inference tests |
-| `python -m gulcli validate examples/specs/basic_infer.gul.json --format json` | Validate a JSON GUL expression |
-| `python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace` | Execute inference and include the trace |
-| `python examples/python_runtime_usage.py` | Run the documented Python helper example |
+| `python3 -m unittest tests.test_runtime_io` | Run runtime validation/inference tests |
+| `python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json` | Validate a JSON GUL expression |
+| `python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace` | Execute inference and include the trace |
+| `python3 examples/python_runtime_usage.py` | Run the documented Python helper example |
 
 ### C++ CLI
 
@@ -60,7 +60,7 @@ On Windows, CMake may emit `build/Release/gul.exe` depending on generator.
 
 ### Gotchas
 
-- `python -m gulcli ...` assumes the editable package has been installed; from a raw checkout, imports can fail because the package root is the repository root.
+- `python3 -m gulcli ...` assumes the editable package has been installed; from a raw checkout, imports can fail because the package root is the repository root.
 - The real file-backed `validate` / `infer` implementation is the Python runtime in `runtime_io.py`.
 - Native C++ `validate` and `infer` currently print placeholders and return success; do not document them as real file-backed validation or inference until `cpp/src/cli.cpp` changes.
 - `cli_bridge.validate` and `cli_bridge.infer` try the native `gul` executable first and only fall back to Python when the executable cannot be started.

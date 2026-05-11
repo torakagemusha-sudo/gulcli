@@ -2,7 +2,7 @@
 
 ## 2026-05-11T16:07:50Z
 
-Aligned developer and runtime documentation with the current source-backed repository: updated `AGENTS.md` setup/test guidance, clarified that Python `runtime_io` is the real validation/inference path, and marked native C++ `validate` / `infer` as placeholders while preserving C++ dataset-streaming guidance.
+Aligned developer and runtime documentation with the current source-backed repository: updated `AGENTS.md` setup/test guidance with copyable `python3` commands for this Linux image, clarified that Python `runtime_io` is the real validation/inference path, and marked native C++ `validate` / `infer` as placeholders while preserving C++ dataset-streaming guidance.
 
 ## 2026-04-12T02:00:17Z
 
