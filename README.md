@@ -5,7 +5,7 @@ GUL is a formal logic system for policy evaluation under uncertainty. It extends
 The system is grounded in a Lean formal specification (`GUL.lean`, `Inference.lean`, `Uncertainty.lean`) and ships as:
 
 - **Python package** — pure-Python implementation of the complete GUL type system, inference engine, policy evaluation, and DSL compiler
-- **C++ CLI** (`gul.exe`) — high-performance dataset streamer that generates ML training data sampled from the GUL formal system
+- **C++ CLI** (`gul` / `gul.exe`) — native dataset streamer that generates ML training data sampled from the GUL formal system
 - **Python bridge** (`cli_bridge.py`) — subprocess wrapper around the CLI for use within Python workflows
 
 ---
@@ -493,18 +493,13 @@ The C++ binary implements the GUL formal system in native code and streams ML tr
 
 ```bash
 cd cpp
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
 Output: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 
-**On Linux/macOS** (no native build): run through Wine:
-
-```bash
-WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
-```
+Requires CMake and a C++17 compiler/linker toolchain. On Debian/Ubuntu images, install the equivalent of `build-essential` if the linker cannot find `libstdc++`.
 
 ### Dataset streaming
 

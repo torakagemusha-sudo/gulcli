@@ -23,12 +23,7 @@ python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
 python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
-### Direct module entry point
-
-```bash
-python3 -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
-python3 -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
-```
+Prefer the package entry point for smoke tests. `gulcli.runtime_io` also exposes a module `main()` for debugging, but running it with `python3 -m gulcli.runtime_io` can emit a `RuntimeWarning` because the package root imports `runtime_io` during initialization.
 
 ---
 

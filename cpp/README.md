@@ -7,12 +7,13 @@ The native CLI currently provides dataset streaming. `validate` and `infer` are 
 ## Build
 
 ```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
 Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
+
+Requires CMake and a C++17 compiler/linker toolchain. On Debian/Ubuntu images, install the equivalent of `build-essential` if the linker cannot find `libstdc++`.
 
 ## Usage
 

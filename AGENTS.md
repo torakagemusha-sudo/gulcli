@@ -41,6 +41,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
+This requires CMake and a C++17 compiler/linker toolchain. If the linker cannot find `libstdc++`, install the system C++ build tools first. C++ build verification is not part of the default documentation-only validation path.
+
 Common streaming commands after a build:
 
 | Command | Purpose |
