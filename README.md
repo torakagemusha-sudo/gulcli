@@ -185,7 +185,7 @@ python -m gulcli validate examples/specs/basic_infer.gul.json --format json
 python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
-The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). When the native `gul` CLI is installed, `cli_validate` / `cli_infer` try it first and fall back to this runtime if the executable cannot be started.
+The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). Use these helpers when you need guaranteed Python runtime semantics. `cli_validate` / `cli_infer` are bridge helpers that try a native `gul` executable first and fall back to this runtime only if that executable cannot be started.
 
 ### Inference engine
 
@@ -524,11 +524,9 @@ gul -deepgul -T -n 500
 nc -l 1234                              # listener (Linux/macOS)
 gul -deepgul -L 127.0.0.1/1234
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
-
-# Validate or infer a spec file
-gul validate policy.gul
-gul infer expr.gul
 ```
+
+Native `gul validate` and `gul infer` are currently placeholders in `cpp/src/cli.cpp`. Use `python -m gulcli validate ...` and `python -m gulcli infer ...` for real file-backed validation and inference.
 
 ### CLI options
 
@@ -543,8 +541,8 @@ gul infer expr.gul
 | `-seed <N>`, `--seed <N>` | RNG seed; 0 means random |
 | `-config <path>` | Load config file (key=value or key: value format) |
 | `-L <host/port>` | Stream to TCP endpoint, e.g. `127.0.0.1/1234` or `127.0.0.1:1234` |
-| `validate [file]` | Validate a GUL spec file |
-| `infer [file]` | Run inference on an expression file |
+| `validate [file]` | Native placeholder; use the Python runtime for real validation |
+| `infer [file]` | Native placeholder; use the Python runtime for real inference |
 | `-h`, `--help` | Print usage |
 | `-v`, `--version` | Print version |
 
@@ -613,13 +611,16 @@ for line in stream_dataset(n=500, random_order=True):
     record = json.loads(line)
     print(record["decision"], record["confidence"])
 
-# Validate a spec file
-ok = cli_validate(Path("policy.gul"))   # returns True/False
+# Validate a spec file. This tries native gul first and falls back to
+# the Python runtime only when native gul cannot be started.
+ok = cli_validate(Path("examples/specs/basic_infer.gul.json"))   # returns True/False
 
-# Run inference and inspect result
-result = cli_infer(Path("expr.gul"))
+# Run inference through the same bridge behavior.
+result = cli_infer(Path("examples/specs/basic_infer.gul.json"))
 print(result.returncode, result.stdout, result.stderr)
 ```
+
+For guaranteed Python validation/inference, call `validate_file` and `infer_file` directly.
 
 ---
 

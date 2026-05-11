@@ -2,11 +2,17 @@
 
 This document describes the executable Python runtime path added during the `v2.2.0` upgrade work.
 
-It is the fastest available route to real file-backed validation and inference while the C++ CLI surface is still being upgraded.
+It is the current route to real file-backed validation and inference. The native C++ CLI still owns dataset streaming, but its `validate` and `infer` commands are placeholders until the C++ command surface is upgraded.
 
 ---
 
 ## Entry points
+
+Install the package before using module entry points:
+
+```bash
+python -m pip install -e .
+```
 
 ### Package entry point
 
@@ -21,6 +27,29 @@ python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 python -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
 python -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
 ```
+
+---
+
+## Input shape
+
+Runtime files are JSON documents containing either an expression node directly or an envelope with an `expr` key:
+
+```json
+{
+  "expr": {
+    "tag": "threshold",
+    "threshold": 0.7,
+    "p": {
+      "tag": "decision",
+      "decision": "permit",
+      "confidence": 0.9,
+      "evidence": ["role check passed"]
+    }
+  }
+}
+```
+
+Validation normalizes the complete input with sorted object keys and includes an `input_hash` derived from that normalized form.
 
 ---
 
@@ -43,7 +72,9 @@ The runtime currently supports these executable tags:
 - `eventually`
 - `until`
 
-`atom` nodes are structurally validated but are not directly executable yet without a fact environment.
+`atom` nodes are structurally validated but are not directly executable yet without a fact environment. Inference over an `atom` raises an error.
+
+Binary tags (`and_`, `or_`, `sequential`, `parallel`, `implies`, `until`) use `p1` and `p2` children. Unary tags (`not_`, `always`, `eventually`) use `p`. `threshold` and `with_confidence` also use `p` plus their numeric field.
 
 ---
 
@@ -61,6 +92,8 @@ Example fields:
 - `normalized`
 - `input_hash`
 
+Text mode prints `OK` or `INVALID` and each validation message. JSON mode emits the full envelope. `--strict` currently only promotes warnings to errors; the validator does not emit warnings today.
+
 ---
 
 ## Inference output
@@ -77,6 +110,8 @@ Example fields:
 - `evidence`
 - `jurisdiction`
 - `trace`
+
+Text mode prints the decision, confidence, optional jurisdiction, evidence, and trace summary. JSON mode emits the full envelope.
 
 ---
 
@@ -96,18 +131,35 @@ This example composes two `permit` decisions through `and_` and then applies a c
 
 ```python
 from pathlib import Path
-from gulcli.runtime_io import validate_file, infer_file
+from gulcli import infer_file, validate_file
 
 validation = validate_file(Path("examples/specs/basic_infer.gul.json"))
 result = infer_file(Path("examples/specs/basic_infer.gul.json"), include_trace=True)
 ```
 
+The same helpers are exported from `gulcli.runtime_io` for callers that prefer importing the implementation module directly.
+
+---
+
+## CLI bridge behavior
+
+`cli_bridge.py` is for workflows that want to call the native `gul` executable when it is available:
+
+```python
+from pathlib import Path
+from gulcli import cli_infer, cli_validate
+
+ok = cli_validate(Path("examples/specs/basic_infer.gul.json"))
+result = cli_infer(Path("examples/specs/basic_infer.gul.json"))
+```
+
+The bridge tries the native executable first and only falls back to this Python runtime when the executable is missing or cannot be launched. Because the current C++ `validate` and `infer` commands are placeholders that start successfully, use `validate_file` / `infer_file` when you need guaranteed Python runtime semantics.
+
 ---
 
 ## Current limitations
 
-- the existing C++ `validate` / `infer` path is still separate from this Python runtime
+- the existing C++ `validate` / `infer` commands are placeholders and are separate from this Python runtime
 - `atom` execution requires a future fact environment or evaluator backend
-- the public package `__init__` surface has not yet been rewired to re-export runtime helpers
 
 This document exists so the executable capability is discoverable immediately, even before the remaining surface unification work lands.

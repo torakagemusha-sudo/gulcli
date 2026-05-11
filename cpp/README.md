@@ -2,6 +2,8 @@
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
+The native CLI currently provides dataset streaming. `validate` and `infer` are accepted by the command parser but still print placeholders; use the Python runtime (`python -m gulcli validate ...`, `python -m gulcli infer ...`) for real file-backed validation and inference.
+
 ## Build
 
 ```bash
@@ -42,8 +44,8 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 | `-random` | Randomize sample order |
 | `-block <N>` | Block size for streaming (default 64) |
 | `-seed <N>` | RNG seed (0 = random) |
-| `validate [file]` | Validate GUL spec file |
-| `infer [file]` | Run inference on expression file |
+| `validate [file]` | Placeholder command; use the Python runtime for real validation |
+| `infer [file]` | Placeholder command; use the Python runtime for real inference |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 
