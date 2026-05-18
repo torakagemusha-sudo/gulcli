@@ -40,6 +40,10 @@ python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trac
 
 ### Direct Module Entry Point
 
+Prefer the package entry point above for automation. The direct module form
+works, but it can emit Python's `runpy` warning because `gulcli.__init__`
+imports `runtime_io` before module execution:
+
 ```bash
 python3 -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
 python3 -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
@@ -196,6 +200,7 @@ native CLI and do not have a Python fallback.
 |---------|--------------|-----|
 | `python: command not found` | The environment exposes Python as `python3` | Use `python3 -m ...` commands |
 | `No module named gulcli` | Package not installed in the active interpreter | Run `python3 -m pip install -e .` from the repo root |
+| `RuntimeWarning: 'gulcli.runtime_io' found in sys.modules...` | Direct module execution after package import | Prefer `python3 -m gulcli ...`; the direct module command still completes |
 | `atom nodes are structural only...` | The spec contains executable `atom` nodes | Replace atoms with `decision` nodes for current runtime execution |
 | `gul` or `wine` is missing | Native Windows streamer is not available in the current environment | Use the Python runtime for validate/infer, or install Wine / provide `GUL_EXE_PATH` for dataset generation |
 | Empty `trace` in inference output | `--trace` / `include_trace=True` was not requested | Re-run inference with trace enabled |

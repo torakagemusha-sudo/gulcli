@@ -39,8 +39,9 @@ Optional integrations are declared in `pyproject.toml`.
 | `python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace` | Run inference and emit trace output |
 | `python3 examples/python_runtime_usage.py` | Exercise the Python helper API |
 
-The package entry point delegates to `runtime_io.main`. The direct module form
-also works:
+The package entry point delegates to `runtime_io.main` and is preferred for
+automation. The direct module form also works, but it can emit Python's `runpy`
+warning because `gulcli.__init__` imports `runtime_io`:
 
 ```bash
 python3 -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
