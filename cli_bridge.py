@@ -1,12 +1,13 @@
 """
-GUL v2.1 — CLI bridge: invoke gul.exe from Python for dataset generation and commands.
+GUL CLI bridge: invoke gul.exe from Python for dataset generation and commands.
 
 Provides a single Python surface for:
 - generate_dataset: run GUL CLI -T and write JSONL (or stream)
 - validate: validate a GUL spec file
 - infer: run inference on an expression file
 
-Requires gul/cpp to be built; set GUL_EXE_PATH or ensure gul is on PATH.
+Requires the native gul executable for dataset generation; pass gul_exe_path,
+set GUL_EXE_PATH, or ensure gul is on PATH.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from typing import Iterator, Optional
 
 
 def find_gul_exe(gul_exe_path: Optional[str] = None) -> str:
-    """Resolve path to gul executable. Prefer GUL_EXE_PATH env, then argument, then PATH."""
+    """Resolve path to gul executable. Prefer argument, then GUL_EXE_PATH, then PATH."""
     exe = gul_exe_path or os.environ.get("GUL_EXE_PATH")
     if exe:
         p = Path(exe)
