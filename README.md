@@ -580,7 +580,7 @@ Treat each line as an independent JSON document. Confidence values are guarantee
 
 ### Python bridge
 
-`cli_bridge.py` wraps the binary for use from Python. The executable is resolved in order: `GUL_EXE_PATH` env var → `gul_exe_path` argument → `cpp/build/Release/gul.exe` relative to the package → `gul` on PATH.
+`cli_bridge.py` wraps the binary for use from Python. The executable is resolved in order: `gul_exe_path` argument → `GUL_EXE_PATH` env var → package-local `cpp/build/` artifacts → `gul` on PATH.
 
 ```python
 from gulcli import generate_dataset, stream_dataset, cli_validate, cli_infer, find_gul_exe

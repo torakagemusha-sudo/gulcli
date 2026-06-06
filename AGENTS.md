@@ -1,6 +1,6 @@
 # AGENTS.md
 
-## Cursor Cloud specific instructions
+## Cursor Cloud Specific Instructions
 
 ### Overview
 
@@ -53,7 +53,11 @@ Common streaming commands after a build:
 
 On Windows, CMake may emit `build/Release/gul.exe` depending on generator.
 
-### Lint / Test / Build
+- **Python tests:** `python3 -m unittest tests.test_runtime_io`
+- **CI:** `.github/workflows/runtime-ci.yml` tests Python 3.10 through 3.13
+- **Python package build backend:** setuptools via `pyproject.toml`
+- **Native binary:** the checked-in `gul.exe` is pre-compiled; there is no
+  required native build step for ordinary runtime validation
 
 - No formatter or linter is configured.
 - Python CI runs `python -m unittest tests.test_runtime_io` on Python 3.10 through 3.13.
