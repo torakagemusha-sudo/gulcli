@@ -2,15 +2,18 @@
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
+The native CLI currently provides dataset streaming. `validate` and `infer` are accepted by the command parser but still print placeholders; use the Python runtime (`python3 -m gulcli validate ...`, `python3 -m gulcli infer ...`) for real file-backed validation and inference.
+
 ## Build
 
 ```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
 Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
+
+Requires CMake and a C++17 compiler/linker toolchain. On Debian/Ubuntu images, install the equivalent of `build-essential` if the linker cannot find `libstdc++`.
 
 ## Usage
 
@@ -42,8 +45,8 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 | `-random` | Randomize sample order |
 | `-block <N>` | Block size for streaming (default 64) |
 | `-seed <N>` | RNG seed (0 = random) |
-| `validate [file]` | Validate GUL spec file |
-| `infer [file]` | Run inference on expression file |
+| `validate [file]` | Placeholder command; use the Python runtime for real validation |
+| `infer [file]` | Placeholder command; use the Python runtime for real inference |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 

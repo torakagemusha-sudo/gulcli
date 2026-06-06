@@ -5,27 +5,51 @@ workstream. It covers file-backed validation and inference for canonical GUL
 JSON specs, the public Python helper surface, and how that runtime relates to
 the native `gul` CLI bridge.
 
-Use this path when you need a verified local workflow that does not depend on
-the Windows `gul.exe` dataset streamer.
+It is the current route to real file-backed validation and inference. The native C++ CLI still owns dataset streaming, but its `validate` and `infer` commands are placeholders until the C++ command surface is upgraded.
 
 ---
 
 ## Setup
 
-Install the package in editable mode before using the package entry point:
+Install the package before using module entry points:
 
 ```bash
 python3 -m pip install -e .
 ```
 
-The repository currently uses the standard library test runner:
+Use the Python 3 executable name for your platform. In CI that may be `python`; on this Linux image it is `python3`.
+
+### Package entry point
 
 ```bash
-python3 -m unittest tests.test_runtime_io
+python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
-CI runs the runtime unit tests and CLI smoke checks on Python `3.10` through
-`3.13` in `.github/workflows/runtime-ci.yml`.
+Prefer the package entry point for smoke tests. `gulcli.runtime_io` also exposes a module `main()` for debugging, but running it with `python3 -m gulcli.runtime_io` can emit a `RuntimeWarning` because the package root imports `runtime_io` during initialization.
+
+---
+
+## Input shape
+
+Runtime files are JSON documents containing either an expression node directly or an envelope with an `expr` key:
+
+```json
+{
+  "expr": {
+    "tag": "threshold",
+    "threshold": 0.7,
+    "p": {
+      "tag": "decision",
+      "decision": "permit",
+      "confidence": 0.9,
+      "evidence": ["role check passed"]
+    }
+  }
+}
+```
+
+Validation normalizes the complete input with sorted object keys and includes an `input_hash` derived from that normalized form.
 
 ---
 
@@ -104,8 +128,9 @@ The runtime validates and evaluates these tags:
 | `always`, `eventually` | Preserves the child decision and adds structural evidence |
 | `until` | Composes the two children as a sequential approximation |
 
-`atom` nodes are structurally validated through `Predicate.from_dict`, but they
-cannot be executed without a future fact environment or evaluator backend.
+`atom` nodes are structurally validated but are not directly executable yet without a fact environment. Inference over an `atom` raises an error.
+
+Binary tags (`and_`, `or_`, `sequential`, `parallel`, `implies`, `until`) use `p1` and `p2` children. Unary tags (`not_`, `always`, `eventually`) use `p`. `threshold` and `with_confidence` also use `p` plus their numeric field.
 
 ---
 
@@ -124,8 +149,13 @@ Important fields:
 - `normalized`
 - `input_hash`
 
-Inference emits `gul.inference.result/1`, defined in
-`schemas/gul.inference.result-1.json`.
+Text mode prints `OK` or `INVALID` and each validation message. JSON mode emits the full envelope. `--strict` currently only promotes warnings to errors; the validator does not emit warnings today.
+
+---
+
+## Inference output
+
+Inference emits a machine-readable envelope shaped as `gul.inference.result/1`.
 
 Important fields:
 
@@ -138,9 +168,7 @@ Important fields:
 - `jurisdiction`
 - `trace`
 
-`input_hash` is computed from a stable, sorted JSON representation of the
-normalized input. Use it to correlate validation and inference records for the
-same spec.
+Text mode prints the decision, confidence, optional jurisdiction, evidence, and trace summary. JSON mode emits the full envelope.
 
 ---
 
@@ -162,13 +190,30 @@ result = infer_file(spec, include_trace=True)
 Lower-level helpers accept already-loaded Python data:
 
 ```python
-from gulcli import evaluate_expr_data, validate_spec_data
-
-payload = {"tag": "decision", "decision": "permit", "confidence": 0.9}
+from pathlib import Path
+from gulcli import infer_file, validate_file
 
 validation = validate_spec_data(payload)
 result = evaluate_expr_data(payload)
 ```
+
+The same helpers are exported from `gulcli.runtime_io` for callers that prefer importing the implementation module directly.
+
+---
+
+## CLI bridge behavior
+
+`cli_bridge.py` is for workflows that want to call the native `gul` executable when it is available:
+
+```python
+from pathlib import Path
+from gulcli import cli_infer, cli_validate
+
+ok = cli_validate(Path("examples/specs/basic_infer.gul.json"))
+result = cli_infer(Path("examples/specs/basic_infer.gul.json"))
+```
+
+The bridge tries the native executable first and only falls back to this Python runtime when the executable is missing or cannot be launched. Because the current C++ `validate` and `infer` commands are placeholders that start successfully, use `validate_file` / `infer_file` when you need guaranteed Python runtime semantics.
 
 ---
 
@@ -207,7 +252,8 @@ native CLI and do not have a Python fallback.
 
 ---
 
-## Current Limitations
+- the existing C++ `validate` / `infer` commands are placeholders and are separate from this Python runtime
+- `atom` execution requires a future fact environment or evaluator backend
 
 - `atom` execution still requires a future fact environment or evaluator backend.
 - Temporal tags are structural approximations, not full temporal model checking.

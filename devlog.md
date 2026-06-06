@@ -1,8 +1,8 @@
 # Devlog
 
-## 2026-05-18T16:03:04Z
+## 2026-05-11T16:07:50Z
 
-Refreshed developer-facing runtime documentation after verifying the Python `gulcli` package path with `python3`: documented editable setup, runtime validation/inference commands, schema contracts, bridge fallback behavior, native `gul.exe` constraints, CI coverage, direct-module warning behavior, and troubleshooting notes. Updated `AGENTS.md` so future automation treats the repo as a Python package plus native binary rather than a binary-only distribution.
+Aligned developer and runtime documentation with the current source-backed repository: updated `AGENTS.md` setup/test guidance with copyable `python3` commands for this Linux image, clarified that Python `runtime_io` is the real validation/inference path, and marked native C++ `validate` / `infer` as placeholders while preserving C++ dataset-streaming guidance.
 
 ## 2026-04-12T02:00:17Z
 

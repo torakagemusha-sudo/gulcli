@@ -4,74 +4,54 @@
 
 ### Overview
 
-This repository contains the GUL CLI / Python package for Governed Uncertainty
-Logic.
+This repository contains the GUL CLI / Python package for Governed Uncertainty Logic.
 
-The current tree includes:
+The current tree is not binary-only. It includes:
 
-- a Python package (`gulcli`) with confidence, decision, jurisdiction,
-  inference, policy, compiler, integration, runtime I/O, and CLI bridge modules
+- a pure-Python `gulcli` package with decision, confidence, jurisdiction, inference, policy-expression, runtime I/O, and CLI-bridge modules
 - JSON schemas under `schemas/`
-- executable runtime examples under `examples/`
-- runtime unit tests under `tests/`
-- a pre-compiled Windows x86-64 dataset streamer (`gul.exe`)
+- executable JSON examples under `examples/specs/`
+- a C++17 CLI implementation under `cpp/` for dataset streaming
+- Python runtime tests under `tests/`
 
-Do not treat this as a binary-only distribution repo. The Python runtime is the
-primary verified path for validation and inference in Linux automation.
+### Python setup and validation
 
-### Setup
-
-Use `python3` in this environment:
+Install the package in editable mode before running module entry points:
 
 ```bash
 python3 -m pip install -e .
 ```
 
-The package requires Python 3.10+ and has no mandatory runtime dependencies.
-Optional integrations are declared in `pyproject.toml`.
-
-### Python Runtime Commands
+Key Python commands:
 
 | Command | Purpose |
 |---------|---------|
-| `python3 -m unittest tests.test_runtime_io` | Run the runtime unit tests |
-| `python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json` | Validate a JSON GUL spec |
-| `python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace` | Run inference and emit trace output |
-| `python3 examples/python_runtime_usage.py` | Exercise the Python helper API |
+| `python3 -m unittest tests.test_runtime_io` | Run runtime validation/inference tests |
+| `python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json` | Validate a JSON GUL expression |
+| `python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace` | Execute inference and include the trace |
+| `python3 examples/python_runtime_usage.py` | Run the documented Python helper example |
 
-The package entry point delegates to `runtime_io.main` and is preferred for
-automation. The direct module form also works, but it can emit Python's `runpy`
-warning because `gulcli.__init__` imports `runtime_io`:
+### C++ CLI
 
-```bash
-python3 -m gulcli.runtime_io validate examples/specs/basic_infer.gul.json --format json
-python3 -m gulcli.runtime_io infer examples/specs/basic_infer.gul.json --format json --trace
-```
-
-### Native Binary
-
-`gul.exe` is a Windows PE32+ executable. On Linux it requires Wine when Wine is
-available:
+Build the native CLI from `cpp/` when working on dataset streaming or C++ core types:
 
 ```bash
-WINEDEBUG=-all DISPLAY= wine gul.exe [options]
+cd cpp
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
-- `WINEDEBUG=-all` suppresses Wine debug noise.
-- `DISPLAY=` avoids X11 errors in headless environments.
-- Wine is not guaranteed to be installed in every Cursor Cloud image. If
-  `wine: command not found`, validate and infer through the Python runtime.
+This requires CMake and a C++17 compiler/linker toolchain. If the linker cannot find `libstdc++`, install the system C++ build tools first. C++ build verification is not part of the default documentation-only validation path.
 
-### Native Binary Commands
+Common streaming commands after a build:
 
 | Command | Purpose |
 |---------|---------|
-| `WINEDEBUG=-all DISPLAY= wine gul.exe --help` | Show usage/help |
-| `WINEDEBUG=-all DISPLAY= wine gul.exe --version` | Show native CLI version |
-| `WINEDEBUG=-all DISPLAY= wine gul.exe -oneshot -T -n 5` | Generate 5 JSON Lines samples to stdout |
-| `WINEDEBUG=-all DISPLAY= wine gul.exe -oneshot -T -n 100 -random -seed 42 -block 8` | Randomized generation with seed and block size |
+| `cpp/build/gul --help` | Show native CLI usage on Linux |
+| `cpp/build/gul -oneshot -T -n 5` | Generate 5 JSON Lines samples to stdout |
+| `cpp/build/gul -oneshot -T -n 100 -random -seed 42 -block 8` | Randomized generation with seed and block size |
 
-### Test / Build
+On Windows, CMake may emit `build/Release/gul.exe` depending on generator.
 
 - **Python tests:** `python3 -m unittest tests.test_runtime_io`
 - **CI:** `.github/workflows/runtime-ci.yml` tests Python 3.10 through 3.13
@@ -79,20 +59,16 @@ WINEDEBUG=-all DISPLAY= wine gul.exe [options]
 - **Native binary:** the checked-in `gul.exe` is pre-compiled; there is no
   required native build step for ordinary runtime validation
 
-No project-wide linter is configured.
+- No formatter or linter is configured.
+- Python CI runs `python -m unittest tests.test_runtime_io` on Python 3.10 through 3.13.
+- The C++ build is manual; there is no C++ test target.
+- For documentation-only changes that touch runtime claims, run the Python tests and both Python smoke commands above.
 
 ### Gotchas
 
-- `python` may not exist; use `python3`.
-- Run `python3 -m pip install -e .` before package-entry commands if
-  `No module named gulcli` appears.
-- The Python runtime can validate and infer JSON specs. Dataset generation still
-  depends on the native CLI.
-- `cli_bridge.find_gul_exe` resolution order is `gul_exe_path` argument,
-  `GUL_EXE_PATH`, package-local `cpp/build/` artifacts, then `gul` on `PATH`.
-- `cli_validate` and `cli_infer` fall back to the Python runtime only when the
-  native executable is missing or cannot be launched.
-- `-deepgul` streaming mode can run indefinitely; pair it with `-n <N>` or stop
-  it manually.
-- TCP streaming (`-L`) requires a listener on the target host/port before
-  starting.
+- `python3 -m gulcli ...` assumes the editable package has been installed; from a raw checkout, imports can fail because the package root is the repository root.
+- The real file-backed `validate` / `infer` implementation is the Python runtime in `runtime_io.py`.
+- Native C++ `validate` and `infer` currently print placeholders and return success; do not document them as real file-backed validation or inference until `cpp/src/cli.cpp` changes.
+- `cli_bridge.validate` and `cli_bridge.infer` try the native `gul` executable first and only fall back to Python when the executable cannot be started.
+- Native `-deepgul` TCP streaming can run indefinitely when no `-n <N>` limit is supplied.
+- TCP streaming (`-L`) requires a listener on the target host/port before starting.
