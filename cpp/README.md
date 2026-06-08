@@ -30,7 +30,7 @@ repository root for file-backed validation and inference.
 
 - **Stream to TCP listener (e.g. training server):**
   ```bash
-  gul -deepgul -L 127.0.0.1/1234
+  gul -deepgul -L 127.0.0.1/1234 -n 500
   gul -oneshot -T -L 127.0.0.1/1234 -n 500
   ```
 

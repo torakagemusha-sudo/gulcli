@@ -531,7 +531,7 @@ gul -deepgul -T -n 500
 
 # Stream to a TCP consumer (start listener first)
 nc -l 1234                              # listener (Linux/macOS)
-gul -deepgul -L 127.0.0.1/1234
+gul -deepgul -L 127.0.0.1/1234 -n 500
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
 
 # Native validate/infer placeholders; use python3 -m gulcli for real execution
