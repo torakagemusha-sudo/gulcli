@@ -41,7 +41,7 @@ automation. The native C++ CLI is still useful for dataset streaming, but its
 | `python3 -m gulcli infer` | Evaluate executable JSON GUL specs | Loads the file, evaluates supported decision/composition tags, optionally emits trace | `atom` nodes are structural only and cannot execute without a fact environment |
 | `python3 -m gulcli.runtime_io ...` | Direct module access to the same runtime | Same validation and inference logic as the package entry point | Can emit Python's `runpy` warning; prefer `python3 -m gulcli` for automation |
 | Native `gul validate` / `gul infer` | C++ command placeholders | Print placeholder messages and return success | Do not load, validate, or infer from the file today |
-| Native `gul -T` / `gul -deepgul` | Dataset JSON Lines streaming | Streams samples from the C++ dataset generator | Requires a launchable native binary; no Python fallback |
+| Native `gul -T` / `gul -deepgul` | Dataset JSON Lines streaming | Streams samples from the C++ dataset generator | Requires a launchable native binary; no Python fallback; unbounded without `-n <N>` or `max_samples` |
 | `cli_bridge.py` helpers | Python subprocess bridge | Dataset helpers call the native CLI; `validate` / `infer` fall back to Python only when the native executable cannot launch | A native command that starts and exits nonzero does not trigger fallback |
 
 This split matters for automation: if Wine or a native `gul` executable is
@@ -240,7 +240,8 @@ Practical constraints:
   policy specs or jurisdiction trees.
 - No `--scenario`, `--stats`, balanced/adversarial mode, or sample provenance
   flags are implemented in the native CLI today.
-- `-deepgul` streaming can run indefinitely without `-n <N>`.
+- Native dataset streaming can run indefinitely when neither `-n <N>` nor a
+  config `max_samples` value is provided. This applies to stdout and TCP paths.
 - TCP streaming with `-L <host/port>` requires a listener to be available before
   the CLI starts.
 - The checked-in `gul.exe` is a Windows executable; use Wine on Linux when Wine

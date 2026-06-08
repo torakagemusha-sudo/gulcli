@@ -192,7 +192,7 @@ generation caveats, see `docs/runtime_usage.md`.
 
 ### Inference engine
 
-`GULInferenceEngine` implements all formal inference rules from `Inference.lean`. Every call appends an `InferenceTrace` entry; the full trace is available via `get_trace_summary()`.
+`GULInferenceEngine` implements the package's GUL inference rules. Every call appends an `InferenceTrace` entry; the full trace is available via `get_trace_summary()`.
 
 ```python
 engine = GULInferenceEngine()
@@ -291,7 +291,7 @@ Audit events are emitted to `geodesic_ai.data.event_bus.EventBus` if available; 
 
 ### Policy expression DSL
 
-The DSL mirrors `GUL.lean`'s `Predicate` and `PolicyExpr` types. All expressions are immutable and JSON-serializable via `to_dict()` / `from_dict()`.
+The DSL provides `Predicate` and `PolicyExpr` types. All expressions are immutable and JSON-serializable via `to_dict()` / `from_dict()`.
 
 #### Entities
 
@@ -518,8 +518,8 @@ WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
 ### Dataset streaming
 
 ```bash
-# Basic: stream to stdout
-gul -oneshot -T
+# Basic: stream to stdout with an explicit limit
+gul -oneshot -T -n 64
 gul -T -n 1000
 gul -config sample.conf -T
 
@@ -544,7 +544,7 @@ gul infer expr.gul
 | Option | Description |
 |--------|-------------|
 | `-T` | Stream dataset to stdout in JSON Lines format |
-| `-oneshot` | Single-batch mode (exit after one batch) |
+| `-oneshot` | Select single-command stdout streaming; pair with `-n` or `max_samples` to exit |
 | `-deepgul` | Enable deep GUL streaming mode |
 | `-n <N>`, `--limit <N>` | Limit output to N samples |
 | `-random`, `--random` | Randomize sample order |
@@ -567,6 +567,9 @@ block_size = 64
 max_samples = 10000
 random_order = true
 ```
+
+When neither `-n <N>` nor a config `max_samples` value is provided, native
+dataset streaming is unbounded.
 
 ### Output format
 
@@ -641,7 +644,7 @@ print(result.returncode, result.stdout, result.stderr)
 | `jurisdiction.py` | `JurisdictionLevel`, `JurisdictionId`, `Jurisdiction`, `JType`, `JurisdictionConstraint` | Hierarchical authority scopes; sub-jurisdiction partial order; validity windows; delegation; constraint types |
 | `inference.py` | `GULInferenceEngine`, `InferenceTrace` | All formal inference rules with full audit trace; AND, OR, NOT, sequential, parallel, conditional, threshold, jurisdiction check |
 | `policy.py` | `GULGovernanceDecision`, `GULGovernancePolicy` | Threshold-based policy evaluation; decision history; audit summary; `geodesic_ai` event bus integration |
-| `expr.py` | `Entity`, `Predicate`, `PolicyExpr`, DSL constructors | JSON-serializable AST for policy expressions; mirrors GUL.lean |
+| `expr.py` | `Entity`, `Predicate`, `PolicyExpr`, DSL constructors | JSON-serializable AST for policy expressions |
 | `compiler.py` | `default_registry`, `compile_predicate_to_constraint`, `compile_policy_expr_to_constraints`, `build_lattice_from_gul_spec` | Compiles `PolicyExpr` → `geodesic_ai` `Constraint` objects; checkpoint loading |
 | `integration.py` | `GULAdapter`, `legacy_decision_to_gul`, `legacy_policy_to_gul`, `constraint_with_confidence`, `lattice_with_uniform_confidence`, `evaluate_constraint_with_gul`, `evaluate_lattice_with_gul`, `create_jurisdiction_hierarchy` | Full bridge between GUL types and `geodesic_ai` constraint/policy ecosystem |
 | `runtime_io.py` | `validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file` | JSON spec validation and inference; powers `python -m gulcli` |

@@ -23,7 +23,7 @@ repository root for file-backed validation and inference.
 
 - **Stream to stdout (training format, JSON Lines):**
   ```bash
-  gul -oneshot -T
+  gul -oneshot -T -n 64
   gul -T -n 1000
   gul -config sample.conf -T -random -block 32
   ```
@@ -39,7 +39,7 @@ repository root for file-backed validation and inference.
 | Option | Description |
 |--------|-------------|
 | `-config <path>` | Load config file (key=value or key: value) |
-| `-oneshot` | Single-batch mode |
+| `-oneshot` | Select single-command stdout streaming; pair with `-n` or `max_samples` to exit |
 | `-T` | Stream dataset to stdout (training format) |
 | `-deepgul` | Enable deep GUL streaming |
 | `-L <host/port>` | Stream to TCP (e.g. `127.0.0.1/1234` or `127.0.0.1:1234`) |
@@ -62,6 +62,9 @@ block_size = 64
 max_samples = 10000
 random_order = true
 ```
+
+When neither `-n <N>` nor a config `max_samples` value is provided, native
+dataset streaming is unbounded.
 
 ### Dataset format (JSON Lines)
 
