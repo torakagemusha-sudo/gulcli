@@ -2,7 +2,7 @@
 
 GUL is a formal logic system for policy evaluation under uncertainty. It extends classical binary allow/deny into a **4-valued decision algebra** — `permit`, `deny`, `defer`, `abstain` — with bounded confidence tracking, hierarchical jurisdiction scoping, and a full inference audit trail.
 
-The system is grounded in a Lean formal specification (`GUL.lean`, `Inference.lean`, `Uncertainty.lean`) and ships as:
+The current repository ships as:
 
 - **Python package** — pure-Python implementation of the complete GUL type system, inference engine, policy evaluation, and DSL compiler
 - **C++ CLI** (`gul.exe`) — high-performance dataset streamer that generates ML training data sampled from the GUL formal system
@@ -181,11 +181,14 @@ print(decision.to_dict())       # full serializable record
 JSON spec files under `examples/specs/` validate and run inference without the C++ binary. Use the package entrypoint:
 
 ```bash
-python -m gulcli validate examples/specs/basic_infer.gul.json --format json
-python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
 The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). When the native `gul` CLI is installed, `cli_validate` / `cli_infer` try it first and fall back to this runtime if the executable cannot be started.
+
+For source-verified command boundaries, bridge fallback behavior, and dataset
+generation caveats, see `docs/runtime_usage.md`.
 
 ### Inference engine
 
@@ -487,7 +490,13 @@ adapter.evaluate_lattice(lattice, x_tensor, combiner="or")
 
 ## C++ CLI
 
-The C++ binary implements the GUL formal system in native code and streams ML training samples as JSON Lines. It can write to stdout or push directly to a TCP socket.
+The C++ binary provides native GUL data structures and streams ML training
+samples as JSON Lines. It can write to stdout or push directly to a TCP socket.
+
+Current boundary: native dataset streaming is implemented, but native
+`gul validate` and `gul infer` are placeholders that print status text and
+return success. Use `python3 -m gulcli validate` and `python3 -m gulcli infer`
+for file-backed validation and inference.
 
 ### Build
 
@@ -525,7 +534,7 @@ nc -l 1234                              # listener (Linux/macOS)
 gul -deepgul -L 127.0.0.1/1234
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
 
-# Validate or infer a spec file
+# Native validate/infer placeholders; use python3 -m gulcli for real execution
 gul validate policy.gul
 gul infer expr.gul
 ```
@@ -543,8 +552,8 @@ gul infer expr.gul
 | `-seed <N>`, `--seed <N>` | RNG seed; 0 means random |
 | `-config <path>` | Load config file (key=value or key: value format) |
 | `-L <host/port>` | Stream to TCP endpoint, e.g. `127.0.0.1/1234` or `127.0.0.1:1234` |
-| `validate [file]` | Validate a GUL spec file |
-| `infer [file]` | Run inference on an expression file |
+| `validate [file]` | Native placeholder; use `python3 -m gulcli validate` for file-backed validation |
+| `infer [file]` | Native placeholder; use `python3 -m gulcli infer` for file-backed inference |
 | `-h`, `--help` | Print usage |
 | `-v`, `--version` | Print version |
 
