@@ -29,6 +29,28 @@ CI runs the runtime unit tests and CLI smoke checks on Python `3.10` through
 
 ---
 
+## Capability Matrix
+
+Use the Python runtime for file-backed validation and inference in Linux
+automation. The native C++ CLI is still useful for dataset streaming, but its
+`validate` and `infer` commands are placeholders in the checked-in source.
+
+| Surface | Use for | Verified behavior | Constraints |
+|---------|---------|-------------------|-------------|
+| `python3 -m gulcli validate` | Validate JSON GUL specs | Loads the file, validates supported tags, emits `gul.validation.result/1` | Python `3.10+`; current validator emits errors, not warnings |
+| `python3 -m gulcli infer` | Evaluate executable JSON GUL specs | Loads the file, evaluates supported decision/composition tags, optionally emits trace | `atom` nodes are structural only and cannot execute without a fact environment |
+| `python3 -m gulcli.runtime_io ...` | Direct module access to the same runtime | Same validation and inference logic as the package entry point | Can emit Python's `runpy` warning; prefer `python3 -m gulcli` for automation |
+| Native `gul validate` / `gul infer` | C++ command placeholders | Print placeholder messages and return success | Do not load, validate, or infer from the file today |
+| Native `gul -T` / `gul -deepgul` | Dataset JSON Lines streaming | Streams samples from the C++ dataset generator | Requires a launchable native binary; no Python fallback; unbounded without `-n <N>` or `max_samples` |
+| `cli_bridge.py` helpers | Python subprocess bridge | Dataset helpers call the native CLI; `validate` / `infer` fall back to Python only when the native executable cannot launch | A native command that starts and exits nonzero does not trigger fallback |
+
+This split matters for automation: if Wine or a native `gul` executable is
+available, `cli_validate` and `cli_infer` will try it first. Because the native
+commands currently return `0` from placeholders, prefer the package entry point
+when you specifically need real validation or inference.
+
+---
+
 ## Entry Points
 
 ### Package Entry Point
@@ -192,6 +214,40 @@ fallback; the native result is returned.
 Dataset generation helpers (`generate_dataset`, `stream_dataset`) require the
 native CLI and do not have a Python fallback.
 
+Additional bridge constraints:
+
+- `generate_dataset` uses `-oneshot -T -n <N>`, can pass `-config`, `-random`,
+  `-block`, and `-seed`, and uses a `300` second subprocess timeout.
+- `stream_dataset` uses `-oneshot -T`, can pass `-n`, `-config`, and `-random`,
+  but does not expose `-block` or `-seed`.
+- `validate` and `infer` use a `30` second timeout and fall back to
+  `runtime_io` only for `FileNotFoundError` or `OSError`.
+- `find_gul_exe` checks an explicit argument, `GUL_EXE_PATH`, package-local
+  `cpp/build/` artifacts, then `gul` on `PATH`.
+
+---
+
+## Dataset Generation Boundaries
+
+The C++ dataset generator emits JSON Lines records with `entity`, `predicate`,
+`context_confidence`, `decision`, `confidence`, and optional `evidence` fields.
+The current generator samples from fixed built-in entity and predicate pools,
+chooses a random decision, and chooses confidence values in `[0.3, 1.0]`.
+
+Practical constraints:
+
+- Dataset generation is not spec-driven yet; it does not consume `*.gul.json`
+  policy specs or jurisdiction trees.
+- No `--scenario`, `--stats`, balanced/adversarial mode, or sample provenance
+  flags are implemented in the native CLI today.
+- Native dataset streaming can run indefinitely when neither `-n <N>` nor a
+  config `max_samples` value is provided. This applies to stdout and TCP paths.
+- TCP streaming with `-L <host/port>` requires a listener to be available before
+  the CLI starts.
+- The checked-in `gul.exe` is a Windows executable; use Wine on Linux when Wine
+  is available, or skip dataset generation in environments without a launchable
+  native binary.
+
 ---
 
 ## Troubleshooting
@@ -202,6 +258,7 @@ native CLI and do not have a Python fallback.
 | `No module named gulcli` | Package not installed in the active interpreter | Run `python3 -m pip install -e .` from the repo root |
 | `RuntimeWarning: 'gulcli.runtime_io' found in sys.modules...` | Direct module execution after package import | Prefer `python3 -m gulcli ...`; the direct module command still completes |
 | `atom nodes are structural only...` | The spec contains executable `atom` nodes | Replace atoms with `decision` nodes for current runtime execution |
+| Native `gul validate` or `gul infer` prints only a placeholder | The native command surface is not file-backed yet | Use `python3 -m gulcli validate` or `python3 -m gulcli infer` |
 | `gul` or `wine` is missing | Native Windows streamer is not available in the current environment | Use the Python runtime for validate/infer, or install Wine / provide `GUL_EXE_PATH` for dataset generation |
 | Empty `trace` in inference output | `--trace` / `include_trace=True` was not requested | Re-run inference with trace enabled |
 
@@ -213,5 +270,9 @@ native CLI and do not have a Python fallback.
 - Temporal tags are structural approximations, not full temporal model checking.
 - The Python runtime covers validation and inference; dataset streaming still
   depends on the native CLI.
+- Native `gul validate` and `gul infer` are placeholders until the C++ file
+  loader and evaluator are implemented.
+- Dataset generation currently uses built-in sample pools rather than declared
+  scenario families or source specifications.
 - `gul.exe` is a Windows binary. On Linux it requires Wine, and Wine may not be
   installed in all automation environments.

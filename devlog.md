@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-06-08T16:04:32Z
+
+Refreshed engineering documentation around the runtime command boundary after verifying `runtime_io.py`, `cli_bridge.py`, the native C++ CLI, dataset generator, CI workflow, and absence of checked-in Lean sources: added a source-backed capability matrix, clarified bridge fallback and dataset generation constraints, removed an unsupported Lean-file claim, and corrected README/C++ README guidance so developers use the Python runtime for real file-backed validation and inference while treating native `validate` / `infer` as placeholders.
+
 ## 2026-05-18T16:03:04Z
 
 Refreshed developer-facing runtime documentation after verifying the Python `gulcli` package path with `python3`: documented editable setup, runtime validation/inference commands, schema contracts, bridge fallback behavior, native `gul.exe` constraints, CI coverage, direct-module warning behavior, and troubleshooting notes. Updated `AGENTS.md` so future automation treats the repo as a Python package plus native binary rather than a binary-only distribution.
