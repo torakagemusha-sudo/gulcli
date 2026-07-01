@@ -14,18 +14,23 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 
 ## Usage
 
+Current boundary: dataset streaming is implemented in the native CLI. Native
+`validate` and `infer` are placeholders in this C++ command surface; use
+`python3 -m gulcli validate ...` and `python3 -m gulcli infer ...` from the
+repository root for file-backed validation and inference.
+
 ### Dataset streaming (ML training)
 
 - **Stream to stdout (training format, JSON Lines):**
   ```bash
-  gul -oneshot -T
+  gul -oneshot -T -n 64
   gul -T -n 1000
   gul -config sample.conf -T -random -block 32
   ```
 
 - **Stream to TCP listener (e.g. training server):**
   ```bash
-  gul -deepgul -L 127.0.0.1/1234
+  gul -deepgul -L 127.0.0.1/1234 -n 500
   gul -oneshot -T -L 127.0.0.1/1234 -n 500
   ```
 
@@ -34,7 +39,7 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 | Option | Description |
 |--------|-------------|
 | `-config <path>` | Load config file (key=value or key: value) |
-| `-oneshot` | Single-batch mode |
+| `-oneshot` | Select single-command stdout streaming; pair with `-n` or `max_samples` to exit |
 | `-T` | Stream dataset to stdout (training format) |
 | `-deepgul` | Enable deep GUL streaming |
 | `-L <host/port>` | Stream to TCP (e.g. `127.0.0.1/1234` or `127.0.0.1:1234`) |
@@ -42,8 +47,8 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 | `-random` | Randomize sample order |
 | `-block <N>` | Block size for streaming (default 64) |
 | `-seed <N>` | RNG seed (0 = random) |
-| `validate [file]` | Validate GUL spec file |
-| `infer [file]` | Run inference on expression file |
+| `validate [file]` | Placeholder command; does not load or validate the file yet |
+| `infer [file]` | Placeholder command; does not load or infer from the file yet |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 
@@ -57,6 +62,9 @@ block_size = 64
 max_samples = 10000
 random_order = true
 ```
+
+When neither `-n <N>` nor a config `max_samples` value is provided, native
+dataset streaming is unbounded.
 
 ### Dataset format (JSON Lines)
 
