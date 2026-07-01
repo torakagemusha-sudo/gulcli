@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-01T20:00:00Z
+
+Verified "ALL 3" deliverables merged on `main` (PR #15): scenario-driven native datasets (`--scenario`, `--stats`, provenance), Python temporal trace enrichment (`ALWAYS`/`EVENTUALLY`/`UNTIL`), and C++ `FactEnvironment` with `--facts` infer parity. Full test suite passes (23 tests).
+
 ## 2026-07-01T18:00:00Z
 
 Completed roadmap phases 2B, 3B, and native atom port: scenario-driven dataset generation with `--scenario`/`--stats` and provenance extensions in C++; temporal trace enrichment (`ALWAYS`/`EVENTUALLY`/`UNTIL` metadata) in Python inference; native `FactEnvironment` with `--facts` on C++ infer and parity tests for atoms and scenarios.
