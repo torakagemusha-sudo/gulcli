@@ -1,0 +1,27 @@
+{
+  "now": 1700000000,
+  "roles": {
+    "agent:alice": ["editor", "reviewer"]
+  },
+  "attributes": {
+    "resource:report-q4": {
+      "status": "draft",
+      "classification": "public"
+    }
+  },
+  "belongs_to": [
+    {
+      "entity": {"kind": "agent", "id": "alice"},
+      "resource": {"kind": "resource", "id": "report-q4"}
+    }
+  ],
+  "in_context": [
+    {
+      "entity": {"kind": "agent", "id": "alice"},
+      "context": {"kind": "context", "id": "workspace:prod"}
+    }
+  ],
+  "custom": {
+    "approved": true
+  }
+}

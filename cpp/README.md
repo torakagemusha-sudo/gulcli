@@ -14,10 +14,10 @@ Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
 
 ## Usage
 
-Current boundary: dataset streaming is implemented in the native CLI. Native
-`validate` and `infer` are placeholders in this C++ command surface; use
-`python3 -m gulcli validate ...` and `python3 -m gulcli infer ...` from the
-repository root for file-backed validation and inference.
+Current boundary: dataset streaming and file-backed `validate` / `infer` are
+implemented for supported composition tags when built from `cpp/`. Native `atom`
+evaluation is not implemented; use `python3 -m gulcli infer --facts ...` for
+atom-backed specs.
 
 ### Dataset streaming (ML training)
 
@@ -47,8 +47,8 @@ repository root for file-backed validation and inference.
 | `-random` | Randomize sample order |
 | `-block <N>` | Block size for streaming (default 64) |
 | `-seed <N>` | RNG seed (0 = random) |
-| `validate [file]` | Placeholder command; does not load or validate the file yet |
-| `infer [file]` | Placeholder command; does not load or infer from the file yet |
+| `validate [file]` | Validate a GUL spec file (`--format json` supported) |
+| `infer [file]` | Run inference on an expression file (`--format json`, `--trace` supported) |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 

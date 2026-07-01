@@ -14,6 +14,8 @@ set(GUL_SOURCES
   src/inference.cpp
   src/dataset.cpp
   src/config.cpp
+  src/json_io.cpp
+  src/runtime_io.cpp
   src/cli.cpp
   src/main.cpp
 )

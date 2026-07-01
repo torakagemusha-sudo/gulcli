@@ -1,0 +1,22 @@
+{
+  "expr": {
+    "tag": "and_",
+    "p1": {
+      "tag": "atom",
+      "pred": {
+        "tag": "has_role",
+        "agent": {"kind": "agent", "id": "alice"},
+        "role": "editor"
+      }
+    },
+    "p2": {
+      "tag": "atom",
+      "pred": {
+        "tag": "has_attribute",
+        "entity": {"kind": "resource", "id": "report-q4"},
+        "attr": "status",
+        "value": "draft"
+      }
+    }
+  }
+}

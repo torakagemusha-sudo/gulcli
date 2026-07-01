@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-01T16:00:00Z
+
+Implemented parallel tracks A and B: Python `facts.py` with `FactEnvironment`, `--facts` CLI flag, `examples/facts/basic_facts.json`, `examples/specs/atom_role.gul.json`, and `tests/test_facts.py`; native C++ `json_io` + `runtime_io` for file-backed `validate`/`infer`, parity tests in `tests/test_native_parity.py`, and `cpp-runtime-ci.yml`. Updated docs to reflect native validate/infer and atom fact-environment requirements.
+
 ## 2026-07-01T14:30:00Z
 
 Implemented Phase 1 production hardening: golden fixtures for `basic_infer` and `jurisdiction_override` specs, `tests/test_golden.py` and `tests/test_schemas.py` with a stdlib-only `tests/schema_validate.py` helper, expanded `runtime-ci.yml` with golden and schema test steps, and added `package-ci.yml` for wheel build plus smoke install (11 tests passing).

@@ -93,7 +93,7 @@ No project-wide linter is configured.
 - Run `python3 -m pip install -e .` before package-entry commands if
   `No module named gulcli` appears.
 - The real file-backed `validate` / `infer` implementation is the Python runtime in `runtime_io.py`.
-- Native C++ `validate` and `infer` currently print placeholders and return success; do not document them as real file-backed validation or inference until `cpp/src/cli.cpp` changes.
+- Native C++ `validate` and `gul infer` load `*.gul.json` files when built from `cpp/` (`cpp/build/gul`). Atom evaluation requires the Python runtime with `--facts`.
 - `cli_bridge.validate` and `cli_bridge.infer` try the native `gul` executable first and only fall back to Python when the executable cannot be started.
 - The Python runtime can validate and infer JSON specs. Dataset generation still
   depends on the native CLI.

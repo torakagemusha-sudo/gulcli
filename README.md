@@ -406,10 +406,9 @@ JurisdictionConstraint.intersection(eu_j.id, ireland_j.id)  # must be in both
 The C++ binary provides native GUL data structures and streams ML training
 samples as JSON Lines. It can write to stdout or push directly to a TCP socket.
 
-Current boundary: native dataset streaming is implemented, but native
-`gul validate` and `gul infer` are placeholders that print status text and
-return success. Use `python3 -m gulcli validate` and `python3 -m gulcli infer`
-for file-backed validation and inference.
+Current boundary: native dataset streaming and file-backed `validate` / `infer`
+are implemented for supported composition tags when built from `cpp/`. Use
+`python3 -m gulcli infer --facts ...` for `atom` evaluation.
 
 ### Build
 
@@ -447,9 +446,9 @@ nc -l 1234                              # listener (Linux/macOS)
 gul -deepgul -L 127.0.0.1/1234 -n 500
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
 
-# Native validate/infer placeholders; use python3 -m gulcli for real execution
-gul validate policy.gul
-gul infer expr.gul
+# Native validate/infer (composition tags; atoms require Python --facts)
+gul validate examples/specs/basic_infer.gul.json --format json
+gul infer examples/specs/basic_infer.gul.json --format json --trace
 ```
 
 ### CLI options
@@ -465,8 +464,8 @@ gul infer expr.gul
 | `-seed <N>`, `--seed <N>` | RNG seed; 0 means random |
 | `-config <path>` | Load config file (key=value or key: value format) |
 | `-L <host/port>` | Stream to TCP endpoint, e.g. `127.0.0.1/1234` or `127.0.0.1:1234` |
-| `validate [file]` | Native placeholder; use `python3 -m gulcli validate` for file-backed validation |
-| `infer [file]` | Native placeholder; use `python3 -m gulcli infer` for file-backed inference |
+| `validate [file]` | Validate a GUL spec file (`--format json` supported) |
+| `infer [file]` | Run inference (`--format json`, `--trace` supported; atoms need Python `--facts`) |
 | `-h`, `--help` | Print usage |
 | `-v`, `--version` | Print version |
 
