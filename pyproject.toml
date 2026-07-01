@@ -29,7 +29,6 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-geodesic = ["geodesic-ai"]
 torch = ["torch>=2.0"]
 
 [project.urls]

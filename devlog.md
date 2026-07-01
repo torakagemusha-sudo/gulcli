@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-01T12:00:00Z
+
+Consolidated open documentation PRs (#6, #7, #9) into a single branch: merged capability matrix and dataset-generation boundaries into `docs/runtime_usage.md`, hybrid `AGENTS.md` (Python runtime + C++ build + Wine/`gul.exe` paths), PR #9 README/cpp README updates (native placeholder caveats, bounded streaming, removed stale Lean references), and removed all public mentions of external integration frameworks from README, `pyproject.toml`, and package docstring. Wrote roadmap design spec at `docs/superpowers/specs/2026-07-01-gulcli-roadmap-design.md` covering v2.2.0 native closure (A), Python runtime depth (B), and production hardening (C).
+
 ## 2026-05-18T16:03:04Z
 
 Refreshed developer-facing runtime documentation after verifying the Python `gulcli` package path with `python3`: documented editable setup, runtime validation/inference commands, schema contracts, bridge fallback behavior, native `gul.exe` constraints, CI coverage, direct-module warning behavior, and troubleshooting notes. Updated `AGENTS.md` so future automation treats the repo as a Python package plus native binary rather than a binary-only distribution.
