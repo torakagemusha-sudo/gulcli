@@ -1,0 +1,33 @@
+{
+    "errors": [],
+    "input_hash": "1033291147243006058ccecc99f19630b18b8a9744a0d465baecb906ba20c363",
+    "normalized": {
+        "expr": {
+            "p": {
+                "p1": {
+                    "confidence": 0.92,
+                    "decision": "permit",
+                    "evidence": [
+                        "role check passed"
+                    ],
+                    "tag": "decision"
+                },
+                "p2": {
+                    "confidence": 0.81,
+                    "decision": "permit",
+                    "evidence": [
+                        "context verified"
+                    ],
+                    "tag": "decision"
+                },
+                "tag": "and_"
+            },
+            "tag": "threshold",
+            "threshold": 0.7
+        }
+    },
+    "ok": true,
+    "schema": "gul.validation.result/1",
+    "source": "examples/specs/basic_infer.gul.json",
+    "version": "2.2.0-dev0"
+}

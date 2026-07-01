@@ -1,0 +1,13 @@
+{
+    "confidence": 0.81,
+    "decision": "permit",
+    "evidence": [
+        "role check passed",
+        "context verified"
+    ],
+    "input_hash": "1033291147243006058ccecc99f19630b18b8a9744a0d465baecb906ba20c363",
+    "jurisdiction": null,
+    "schema": "gul.inference.result/1",
+    "trace": [],
+    "version": "2.2.0-dev0"
+}

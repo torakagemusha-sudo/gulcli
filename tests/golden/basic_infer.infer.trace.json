@@ -1,0 +1,48 @@
+{
+    "confidence": 0.81,
+    "decision": "permit",
+    "evidence": [
+        "role check passed",
+        "context verified"
+    ],
+    "input_hash": "1033291147243006058ccecc99f19630b18b8a9744a0d465baecb906ba20c363",
+    "jurisdiction": null,
+    "schema": "gul.inference.result/1",
+    "trace": [
+        {
+            "inputs": [
+                {
+                    "confidence": 0.92,
+                    "decision": "permit"
+                },
+                {
+                    "confidence": 0.81,
+                    "decision": "permit"
+                }
+            ],
+            "metadata": {},
+            "output": {
+                "confidence": 0.81,
+                "decision": "permit"
+            },
+            "rule": "AND"
+        },
+        {
+            "inputs": [
+                {
+                    "confidence": 0.81,
+                    "decision": "permit"
+                }
+            ],
+            "metadata": {
+                "threshold": 0.7
+            },
+            "output": {
+                "confidence": 0.81,
+                "decision": "permit"
+            },
+            "rule": "THRESHOLD"
+        }
+    ],
+    "version": "2.2.0-dev0"
+}
