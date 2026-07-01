@@ -10,6 +10,7 @@ from typing import Any
 from .confidence import Confidence, ConfidenceOps
 from .decision import Decision, DecisionCombiner, EvaluatedDecision
 from .expr import Predicate
+from .facts import FactEnvironment
 from .inference import GULInferenceEngine
 
 RUNTIME_VERSION = "2.2.0-dev0"
@@ -184,13 +185,22 @@ def _ed_from_node(node: dict[str, Any]) -> EvaluatedDecision:
     return EvaluatedDecision(decision=decision, confidence=confidence, evidence=evidence, jurisdiction=jurisdiction)
 
 
-def _eval_atom(node: dict[str, Any]) -> EvaluatedDecision:
+def _eval_atom(node: dict[str, Any], facts: FactEnvironment | None) -> EvaluatedDecision:
     pred = node.get("pred", {})
-    tag = pred.get("tag")
-    raise ValueError(f"atom nodes are structural only and cannot be executed without a fact environment (predicate tag={tag!r})")
+    if facts is None:
+        tag = pred.get("tag") if isinstance(pred, dict) else getattr(pred, "tag", None)
+        raise ValueError(
+            f"atom nodes are structural only and cannot be executed without a fact environment "
+            f"(predicate tag={tag!r}); pass --facts or facts= to infer_file"
+        )
+    return facts.evaluate_predicate(pred)
 
 
-def evaluate_expr_data(data: Any, include_trace: bool = False) -> dict[str, Any]:
+def evaluate_expr_data(
+    data: Any,
+    include_trace: bool = False,
+    facts: FactEnvironment | None = None,
+) -> dict[str, Any]:
     validation = validate_spec_data(data)
     if not validation["ok"]:
         raise ValueError("input did not validate")
@@ -203,7 +213,7 @@ def evaluate_expr_data(data: Any, include_trace: bool = False) -> dict[str, Any]
         if tag == "decision":
             return _ed_from_node(expr)
         if tag == "atom":
-            return _eval_atom(expr)
+            return _eval_atom(expr, facts)
         if tag == "and_":
             return engine.evaluate_and(_eval(expr["p1"]), _eval(expr["p2"]))
         if tag == "or_":
@@ -317,8 +327,16 @@ def validate_file(path: str | Path) -> dict[str, Any]:
     return validate_spec_data(load_json(path), source=str(path))
 
 
-def infer_file(path: str | Path, include_trace: bool = False) -> dict[str, Any]:
-    return evaluate_expr_data(load_json(path), include_trace=include_trace)
+def infer_file(
+    path: str | Path,
+    include_trace: bool = False,
+    facts: FactEnvironment | None = None,
+) -> dict[str, Any]:
+    return evaluate_expr_data(load_json(path), include_trace=include_trace, facts=facts)
+
+
+def load_facts(path: str | Path) -> FactEnvironment:
+    return FactEnvironment.from_dict(load_json(path))
 
 
 def _print_validation(result: dict[str, Any], as_json: bool) -> int:
@@ -364,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
     p_infer.add_argument("path")
     p_infer.add_argument("--format", choices=("text", "json"), default="text")
     p_infer.add_argument("--trace", action="store_true")
+    p_infer.add_argument("--facts", help="Path to JSON fact environment for atom evaluation")
 
     args = parser.parse_args(argv)
 
@@ -377,8 +396,9 @@ def main(argv: list[str] | None = None) -> int:
         return _print_validation(result, as_json=args.format == "json")
 
     if args.cmd == "infer":
+        facts = load_facts(args.facts) if getattr(args, "facts", None) else None
         try:
-            result = infer_file(args.path, include_trace=args.trace)
+            result = infer_file(args.path, include_trace=args.trace, facts=facts)
         except Exception as exc:
             payload = {
                 "schema": "gul.inference.result/1",

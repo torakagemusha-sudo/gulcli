@@ -25,6 +25,8 @@ struct CliConfig {
     std::string validate_file;
     bool infer_only = false;
     std::string infer_file;
+    bool format_json = false;
+    bool infer_trace = false;
     bool help = false;
     bool version = false;
     std::vector<std::string> positional;

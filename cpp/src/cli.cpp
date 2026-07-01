@@ -1,7 +1,7 @@
 /** GUL v2.1 — CLI: stream dataset (-oneshot -T, -deepgul -L host/port), -config, validate, infer. */
 #include "gul/config.hpp"
 #include "gul/dataset.hpp"
-#include "gul/inference.hpp"
+#include "gul/runtime_io.hpp"
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -122,14 +122,50 @@ int stream_to_tcp(const gul::CliConfig& c) {
     return 0;
 }
 
-int cmd_validate(const gul::CliConfig&) {
-    std::cout << "validate: GUL spec validation (file load placeholder)\n";
-    return 0;
+int cmd_validate(const gul::CliConfig& c) {
+    if (c.validate_file.empty()) {
+        std::cerr << "validate: missing file path\n";
+        return 1;
+    }
+    try {
+        gul::ValidationResult result = gul::validate_spec_file(c.validate_file);
+        if (c.format_json) {
+            std::cout << result.to_json() << "\n";
+        } else {
+            std::cout << (result.ok ? "OK" : "INVALID") << ": " << result.source << "\n";
+            for (const auto& msg : result.errors)
+                std::cout << "[" << msg.severity << "] " << msg.code << " " << msg.path << ": " << msg.message << "\n";
+        }
+        return result.ok ? 0 : 1;
+    } catch (const std::exception& ex) {
+        std::cerr << "validate error: " << ex.what() << "\n";
+        return 1;
+    }
 }
 
-int cmd_infer(const gul::CliConfig&) {
-    std::cout << "infer: GUL inference from expression file (placeholder)\n";
-    return 0;
+int cmd_infer(const gul::CliConfig& c) {
+    if (c.infer_file.empty()) {
+        std::cerr << "infer: missing file path\n";
+        return 1;
+    }
+    try {
+        gul::InferenceResult result = gul::infer_spec_file(c.infer_file, c.infer_trace);
+        if (c.format_json) {
+            std::cout << result.to_json() << "\n";
+        } else {
+            std::cout << "decision=" << result.decision << "\n";
+            std::cout << "confidence=" << result.confidence << "\n";
+        }
+        return 0;
+    } catch (const std::exception& ex) {
+        if (c.format_json) {
+            std::cout << "{\"schema\":\"gul.inference.result/1\",\"version\":\"2.2.0-dev0\",\"error\":\""
+                      << ex.what() << "\"}\n";
+        } else {
+            std::cerr << "infer error: " << ex.what() << "\n";
+        }
+        return 1;
+    }
 }
 
 } // namespace

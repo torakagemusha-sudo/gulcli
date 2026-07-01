@@ -90,11 +90,27 @@ CliConfig parse_args(int argc, char* argv[]) {
         if (arg == "validate") {
             c.validate_only = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') c.validate_file = argv[++i];
+            while (i + 1 < argc && std::string(argv[i + 1]).rfind("--", 0) == 0) {
+                std::string flag = argv[++i];
+                if (flag == "--format" && i + 1 < argc) {
+                    c.format_json = (std::string(argv[++i]) == "json");
+                } else if (flag == "--strict") {
+                    // accepted for CLI compatibility; validation already treats issues as errors
+                }
+            }
             continue;
         }
         if (arg == "infer") {
             c.infer_only = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') c.infer_file = argv[++i];
+            while (i + 1 < argc && std::string(argv[i + 1]).rfind("-", 0) == 0) {
+                std::string flag = argv[++i];
+                if (flag == "--format" && i + 1 < argc) {
+                    c.format_json = (std::string(argv[++i]) == "json");
+                } else if (flag == "--trace") {
+                    c.infer_trace = true;
+                }
+            }
             continue;
         }
         if (arg == "-h" || arg == "--help") { c.help = true; continue; }
