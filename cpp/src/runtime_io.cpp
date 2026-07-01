@@ -1,5 +1,6 @@
 #include "gul/runtime_io.hpp"
 #include "gul/decision.hpp"
+#include "gul/fact_environment.hpp"
 #include "gul/inference.hpp"
 #include <algorithm>
 #include <array>
@@ -269,58 +270,64 @@ EvalOutcome from_evaluated(const EvaluatedDecision& ed, const std::string& juris
     return out;
 }
 
-EvalOutcome eval_atom(const JsonValue&) {
-    throw std::runtime_error(
-        "atom nodes require a fact environment; use python3 -m gulcli infer --facts for atom execution");
+EvalOutcome eval_atom(const JsonValue& node, const FactEnvironment* facts) {
+    if (!facts) {
+        throw std::runtime_error(
+            "atom nodes require a fact environment; use --facts or python3 -m gulcli infer --facts");
+    }
+    const JsonValue* pred = node.get("pred");
+    if (!pred)
+        throw std::runtime_error("atom node missing pred");
+    return from_evaluated(facts->evaluate_predicate(*pred));
 }
 
-EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine);
+EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine, const FactEnvironment* facts);
 
-EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine) {
+EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine, const FactEnvironment* facts) {
     const std::string tag = node.get_string("tag");
     if (tag == "decision") return from_evaluated(from_decision_node(node));
-    if (tag == "atom") return eval_atom(node);
+    if (tag == "atom") return eval_atom(node, facts);
     if (tag == "and_") {
-        EvalOutcome left = eval_node(*node.get("p1"), engine);
-        EvalOutcome right = eval_node(*node.get("p2"), engine);
+        EvalOutcome left = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome right = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{left.decision, Confidence(left.confidence), left.evidence, nullptr};
         EvaluatedDecision d2{right.decision, Confidence(right.confidence), right.evidence, nullptr};
         return from_evaluated(engine.evaluate_and(d1, d2), left.jurisdiction.empty() ? right.jurisdiction : left.jurisdiction);
     }
     if (tag == "or_") {
-        EvalOutcome left = eval_node(*node.get("p1"), engine);
-        EvalOutcome right = eval_node(*node.get("p2"), engine);
+        EvalOutcome left = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome right = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{left.decision, Confidence(left.confidence), left.evidence, nullptr};
         EvaluatedDecision d2{right.decision, Confidence(right.confidence), right.evidence, nullptr};
         return from_evaluated(engine.evaluate_or(d1, d2), left.jurisdiction.empty() ? right.jurisdiction : left.jurisdiction);
     }
     if (tag == "sequential") {
-        EvalOutcome left = eval_node(*node.get("p1"), engine);
-        EvalOutcome right = eval_node(*node.get("p2"), engine);
+        EvalOutcome left = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome right = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{left.decision, Confidence(left.confidence), left.evidence, nullptr};
         EvaluatedDecision d2{right.decision, Confidence(right.confidence), right.evidence, nullptr};
         return from_evaluated(engine.evaluate_sequential(d1, d2));
     }
     if (tag == "parallel") {
-        EvalOutcome left = eval_node(*node.get("p1"), engine);
-        EvalOutcome right = eval_node(*node.get("p2"), engine);
+        EvalOutcome left = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome right = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{left.decision, Confidence(left.confidence), left.evidence, nullptr};
         EvaluatedDecision d2{right.decision, Confidence(right.confidence), right.evidence, nullptr};
         return from_evaluated(engine.evaluate_parallel(d1, d2));
     }
     if (tag == "not_") {
-        EvalOutcome inner = eval_node(*node.get("p"), engine);
+        EvalOutcome inner = eval_node(*node.get("p"), engine, facts);
         EvaluatedDecision d{inner.decision, Confidence(inner.confidence), inner.evidence, nullptr};
         return from_evaluated(engine.evaluate_not(d), inner.jurisdiction);
     }
     if (tag == "threshold") {
-        EvalOutcome inner = eval_node(*node.get("p"), engine);
+        EvalOutcome inner = eval_node(*node.get("p"), engine, facts);
         EvaluatedDecision d{inner.decision, Confidence(inner.confidence), inner.evidence, nullptr};
         return from_evaluated(engine.evaluate_threshold(d, node.get_number("threshold")), inner.jurisdiction);
     }
     if (tag == "override") {
-        EvalOutcome base = eval_node(*node.get("base"), engine);
-        EvalOutcome over = eval_node(*node.get("override"), engine);
+        EvalOutcome base = eval_node(*node.get("base"), engine, facts);
+        EvalOutcome over = eval_node(*node.get("override"), engine, facts);
         Decision final_decision = DecisionCombiner::override(base.decision, over.decision);
         if (over.decision == Decision::ABSTAIN) {
             EvalOutcome out = base;
@@ -337,7 +344,7 @@ EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine) {
         return out;
     }
     if (tag == "jurisdiction") {
-        EvalOutcome inner = eval_node(*node.get("p"), engine);
+        EvalOutcome inner = eval_node(*node.get("p"), engine, facts);
         std::string required = node.get_string("required");
         std::string request = node.get_string("request", required);
         if (request == required || request.rfind(required + ".", 0) == 0) {
@@ -354,15 +361,15 @@ EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine) {
         return out;
     }
     if (tag == "implies") {
-        EvalOutcome antecedent = eval_node(*node.get("p1"), engine);
-        EvalOutcome consequent = eval_node(*node.get("p2"), engine);
+        EvalOutcome antecedent = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome consequent = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{antecedent.decision, Confidence(antecedent.confidence), antecedent.evidence, nullptr};
         EvaluatedDecision d2{consequent.decision, Confidence(consequent.confidence), consequent.evidence, nullptr};
         EvaluatedDecision not_a = engine.evaluate_not(d1);
         return from_evaluated(engine.evaluate_or(not_a, d2));
     }
     if (tag == "with_confidence") {
-        EvalOutcome inner = eval_node(*node.get("p"), engine);
+        EvalOutcome inner = eval_node(*node.get("p"), engine, facts);
         Confidence annotated(node.get_number("confidence"));
         EvalOutcome out = inner;
         out.confidence = ConfidenceOps::combine_intersection(Confidence(inner.confidence), annotated).value();
@@ -370,13 +377,13 @@ EvalOutcome eval_node(const JsonValue& node, GULInferenceEngine& engine) {
         return out;
     }
     if (tag == "always" || tag == "eventually") {
-        EvalOutcome inner = eval_node(*node.get("p"), engine);
+        EvalOutcome inner = eval_node(*node.get("p"), engine, facts);
         inner.evidence.push_back(std::string(tag) + " constraint preserved structurally");
         return inner;
     }
     if (tag == "until") {
-        EvalOutcome left = eval_node(*node.get("p1"), engine);
-        EvalOutcome right = eval_node(*node.get("p2"), engine);
+        EvalOutcome left = eval_node(*node.get("p1"), engine, facts);
+        EvalOutcome right = eval_node(*node.get("p2"), engine, facts);
         EvaluatedDecision d1{left.decision, Confidence(left.confidence), left.evidence, nullptr};
         EvaluatedDecision d2{right.decision, Confidence(right.confidence), right.evidence, nullptr};
         EvalOutcome out = from_evaluated(engine.evaluate_sequential(d1, d2));
@@ -418,13 +425,13 @@ ValidationResult validate_spec_data(const JsonValue& data, const std::string& so
     return result;
 }
 
-InferenceResult infer_spec_data(const JsonValue& data, bool include_trace) {
+InferenceResult infer_spec_data(const JsonValue& data, bool include_trace, const FactEnvironment* facts) {
     ValidationResult validation = validate_spec_data(data, "<memory>");
     if (!validation.ok)
         throw std::runtime_error("input did not validate");
 
     GULInferenceEngine engine;
-    EvalOutcome outcome = eval_node(root_expr(data), engine);
+    EvalOutcome outcome = eval_node(root_expr(data), engine, facts);
     InferenceResult result;
     result.input_hash = validation.input_hash;
     result.decision = to_string(outcome.decision);
@@ -447,8 +454,14 @@ ValidationResult validate_spec_file(const std::string& path) {
     return validate_spec_data(load_json_file(path), path);
 }
 
-InferenceResult infer_spec_file(const std::string& path, bool include_trace) {
-    return infer_spec_data(load_json_file(path), include_trace);
+InferenceResult infer_spec_file(const std::string& path, bool include_trace, const std::string& facts_path) {
+    const FactEnvironment* facts_ptr = nullptr;
+    FactEnvironment facts;
+    if (!facts_path.empty()) {
+        facts = FactEnvironment::from_json(load_json_file(facts_path));
+        facts_ptr = &facts;
+    }
+    return infer_spec_data(load_json_file(path), include_trace, facts_ptr);
 }
 
 std::string ValidationResult::to_json() const {

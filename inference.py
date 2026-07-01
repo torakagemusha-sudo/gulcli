@@ -395,6 +395,62 @@ class GULInferenceEngine:
         self._record_trace("JURISDICTION", [d], result)
         return result
 
+    def evaluate_always(self, d: EvaluatedDecision) -> EvaluatedDecision:
+        """Structural ALWAYS approximation with temporal trace metadata."""
+        result = EvaluatedDecision(
+            d.decision,
+            d.confidence,
+            d.evidence + ["always: structural approximation"],
+            jurisdiction=d.jurisdiction,
+        )
+        self._record_trace(
+            "ALWAYS",
+            [d],
+            result,
+            temporal="always",
+            approximation="structural",
+        )
+        return result
+
+    def evaluate_eventually(self, d: EvaluatedDecision) -> EvaluatedDecision:
+        """Structural EVENTUALLY approximation with temporal trace metadata."""
+        result = EvaluatedDecision(
+            d.decision,
+            d.confidence,
+            d.evidence + ["eventually: structural approximation"],
+            jurisdiction=d.jurisdiction,
+        )
+        self._record_trace(
+            "EVENTUALLY",
+            [d],
+            result,
+            temporal="eventually",
+            approximation="structural",
+        )
+        return result
+
+    def evaluate_until(
+        self,
+        d1: EvaluatedDecision,
+        d2: EvaluatedDecision,
+    ) -> EvaluatedDecision:
+        """UNTIL composed as sequential approximation with temporal trace metadata."""
+        out = self.evaluate_sequential(d1, d2)
+        result = EvaluatedDecision(
+            out.decision,
+            out.confidence,
+            out.evidence + ["until: sequential approximation"],
+            jurisdiction=out.jurisdiction,
+        )
+        self._record_trace(
+            "UNTIL",
+            [d1, d2],
+            result,
+            temporal="until",
+            approximation="sequential",
+        )
+        return result
+
     def evaluate_all(
         self,
         decisions: list[EvaluatedDecision],

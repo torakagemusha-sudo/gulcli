@@ -87,6 +87,18 @@ CliConfig parse_args(int argc, char* argv[]) {
             if (i + 1 < argc) { c.seed = std::stoull(argv[++i]); c.dataset.seed = c.seed; }
             continue;
         }
+        if (arg == "--scenario") {
+            if (i + 1 < argc) {
+                c.scenario_mode = argv[++i];
+                c.dataset.scenario_mode = c.scenario_mode;
+            }
+            continue;
+        }
+        if (arg == "--stats") {
+            c.emit_stats = true;
+            c.dataset.emit_stats = true;
+            continue;
+        }
         if (arg == "validate") {
             c.validate_only = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') c.validate_file = argv[++i];
@@ -109,6 +121,8 @@ CliConfig parse_args(int argc, char* argv[]) {
                     c.format_json = (std::string(argv[++i]) == "json");
                 } else if (flag == "--trace") {
                     c.infer_trace = true;
+                } else if (flag == "--facts" && i + 1 < argc) {
+                    c.facts_file = argv[++i];
                 }
             }
             continue;

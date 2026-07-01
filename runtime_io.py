@@ -278,30 +278,12 @@ def evaluate_expr_data(
             )
         if tag == "always":
             inner = _eval(expr["p"])
-            return EvaluatedDecision(
-                decision=inner.decision,
-                confidence=inner.confidence,
-                evidence=inner.evidence + ["always constraint preserved structurally"],
-                jurisdiction=inner.jurisdiction,
-            )
+            return engine.evaluate_always(inner)
         if tag == "eventually":
             inner = _eval(expr["p"])
-            return EvaluatedDecision(
-                decision=inner.decision,
-                confidence=inner.confidence,
-                evidence=inner.evidence + ["eventually constraint preserved structurally"],
-                jurisdiction=inner.jurisdiction,
-            )
+            return engine.evaluate_eventually(inner)
         if tag == "until":
-            left = _eval(expr["p1"])
-            right = _eval(expr["p2"])
-            out = engine.evaluate_sequential(left, right)
-            return EvaluatedDecision(
-                decision=out.decision,
-                confidence=out.confidence,
-                evidence=out.evidence + ["until composed as sequential approximation"],
-                jurisdiction=out.jurisdiction,
-            )
+            return engine.evaluate_until(_eval(expr["p1"]), _eval(expr["p2"]))
         raise ValueError(f"unsupported tag: {tag}")
 
     result = _eval(node)
