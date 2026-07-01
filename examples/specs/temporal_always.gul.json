@@ -1,0 +1,11 @@
+{
+  "expr": {
+    "tag": "always",
+    "p": {
+      "tag": "decision",
+      "decision": "permit",
+      "confidence": 0.88,
+      "evidence": ["policy holds"]
+    }
+  }
+}

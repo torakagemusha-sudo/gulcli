@@ -1,4 +1,5 @@
 #include "gul/dataset.hpp"
+#include "gul/scenarios.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <random>
@@ -46,6 +47,16 @@ std::string DatasetSample::to_json_line() const {
         }
         o << "]";
     }
+    if (!provenance_scenario.empty()) {
+        o << ",\"extensions\":{";
+        o << "\"schema\":\"gul.dataset.sample/1\"";
+        o << ",\"scenario\":\"" << escape_json(provenance_scenario) << "\"";
+        o << ",\"source_spec_id\":\"" << escape_json(provenance_source_spec_id) << "\"";
+        o << ",\"seed\":" << provenance_seed;
+        o << ",\"generator_version\":\"" << escape_json(provenance_generator_version) << "\"";
+        o << ",\"sample_index\":" << provenance_index;
+        o << "}";
+    }
     o << "}";
     return o.str();
 }
@@ -56,51 +67,26 @@ DatasetGenerator::DatasetGenerator(DatasetConfig config)
         rng_.seed(static_cast<std::mt19937::result_type>(config_.seed));
     else
         rng_.seed(std::random_device{}());
-    ensure_pools();
 }
 
 void DatasetGenerator::set_seed(std::uint64_t seed) {
+    config_.seed = seed;
     rng_.seed(static_cast<std::mt19937::result_type>(seed));
 }
 
-void DatasetGenerator::ensure_pools() {
-    if (!entity_pool_.empty()) return;
-    entity_pool_ = {
-        Entity("agent", "alice"),
-        Entity("agent", "bob"),
-        Entity("resource", "doc1"),
-        Entity("resource", "doc2"),
-        Entity("context", "ctx1"),
-        Entity("context", "ctx2"),
-        Entity("policy", "p1"),
-    };
-    predicate_pool_ = {
-        belongs_to(Entity("agent", "alice"), Entity("resource", "doc1")),
-        has_role(Entity("agent", "alice"), "admin"),
-        has_role(Entity("agent", "bob"), "viewer"),
-        has_attribute(Entity("resource", "doc1"), "level", "secret"),
-        in_context(Entity("agent", "alice"), Entity("context", "ctx1")),
-        custom("custom_rule_1"),
-        custom("custom_rule_2"),
-    };
-}
-
 DatasetSample DatasetGenerator::next_sample() {
-    ensure_pools();
-    std::uniform_int_distribution<size_t> ed(0, entity_pool_.size() - 1);
-    std::uniform_int_distribution<size_t> pd(0, predicate_pool_.size() - 1);
-    std::uniform_real_distribution<double> conf(0.3, 1.0);
-    std::uniform_int_distribution<int> dec(0, 3);
+    ScenarioFamily family = ScenarioFamily::PermitPath;
+    if (config_.scenario_mode == "adversarial")
+        family = ScenarioRegistry::pick_adversarial(rng_);
+    else
+        family = ScenarioRegistry::pick_balanced(sample_count_);
 
-    Entity e = entity_pool_[ed(rng_)];
-    Predicate p = predicate_pool_[pd(rng_)];
-    double c = conf(rng_);
-    Decision d = static_cast<Decision>(dec(rng_));
-    Confidence conf_val(c);
-    std::vector<std::string> evidence = { "gen_" + std::to_string(sample_count_) };
+    ScenarioSample generated = ScenarioRegistry::generate(
+        family, rng_, config_.seed, sample_count_);
+    if (config_.emit_stats)
+        stats_.record(generated.family_name, generated.sample.decision);
     sample_count_++;
-
-    return DatasetSample{ e, p, c, d, conf_val, evidence };
+    return generated.sample;
 }
 
 void DatasetGenerator::stream_to(std::ostream& out, std::size_t max_samples) {
@@ -128,6 +114,31 @@ void DatasetGenerator::stream_block_to(std::ostream& out) {
 
 void DatasetGenerator::shuffle(std::vector<DatasetSample>& samples) {
     std::shuffle(samples.begin(), samples.end(), rng_);
+}
+
+void DatasetStats::record(const std::string& scenario, Decision decision) {
+    scenario_counts[scenario]++;
+    decision_counts[to_string(decision)]++;
+}
+
+std::string DatasetStats::to_json() const {
+    std::ostringstream out;
+    out << "{\"scenario_distribution\":{";
+    bool first = true;
+    for (const auto& entry : scenario_counts) {
+        if (!first) out << ",";
+        first = false;
+        out << "\"" << entry.first << "\":" << entry.second;
+    }
+    out << "},\"decision_distribution\":{";
+    first = true;
+    for (const auto& entry : decision_counts) {
+        if (!first) out << ",";
+        first = false;
+        out << "\"" << entry.first << "\":" << entry.second;
+    }
+    out << "}}";
+    return out.str();
 }
 
 void DatasetStreamer::stream(DatasetGenerator& gen, WriteFunc write,

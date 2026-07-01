@@ -12,6 +12,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace gul {
@@ -22,6 +23,16 @@ struct DatasetConfig {
     bool random_order = false;
     std::uint64_t seed = 0;           // 0 = random device
     bool json_lines = true;           // one JSON object per line (NDJSON)
+    std::string scenario_mode = "balanced";  // balanced | adversarial
+    bool emit_stats = false;
+};
+
+struct DatasetStats {
+    std::unordered_map<std::string, std::size_t> scenario_counts;
+    std::unordered_map<std::string, std::size_t> decision_counts;
+
+    void record(const std::string& scenario, Decision decision);
+    std::string to_json() const;
 };
 
 /** One training sample: inputs (entity, predicate, context) + label (decision, confidence). */
@@ -32,6 +43,11 @@ struct DatasetSample {
     Decision decision;
     Confidence confidence;
     std::vector<std::string> evidence;
+    std::string provenance_scenario;
+    std::string provenance_source_spec_id;
+    std::uint64_t provenance_seed = 0;
+    std::string provenance_generator_version;
+    std::size_t provenance_index = 0;
 
     std::string to_json_line() const;
 };
@@ -50,14 +66,13 @@ public:
     void stream_block_to(std::ostream& out);
     /** Shuffle a vector of samples (for -random). */
     void shuffle(std::vector<DatasetSample>& samples);
+    const DatasetStats& stats() const { return stats_; }
 
 private:
     DatasetConfig config_;
     std::mt19937 rng_;
     std::size_t sample_count_ = 0;
-    std::vector<Entity> entity_pool_;
-    std::vector<Predicate> predicate_pool_;
-    void ensure_pools();
+    DatasetStats stats_;
 };
 
 /** Stream dataset over TCP (for -deepgul -L host/port). */

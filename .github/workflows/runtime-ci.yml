@@ -39,6 +39,14 @@ jobs:
         run: |
           python -m unittest tests.test_schemas
 
+      - name: Run temporal trace tests
+        run: |
+          python -m unittest tests.test_temporal
+
+      - name: Run fact environment tests
+        run: |
+          python -m unittest tests.test_facts
+
       - name: Smoke test validation
         run: |
           python -m gulcli validate examples/specs/basic_infer.gul.json --format json

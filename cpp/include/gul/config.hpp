@@ -27,6 +27,9 @@ struct CliConfig {
     std::string infer_file;
     bool format_json = false;
     bool infer_trace = false;
+    std::string facts_file;
+    std::string scenario_mode;
+    bool emit_stats = false;
     bool help = false;
     bool version = false;
     std::vector<std::string> positional;

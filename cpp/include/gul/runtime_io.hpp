@@ -37,6 +37,6 @@ ValidationResult validate_spec_data(const JsonValue& data, const std::string& so
 InferenceResult infer_spec_data(const JsonValue& data, bool include_trace = false);
 
 ValidationResult validate_spec_file(const std::string& path);
-InferenceResult infer_spec_file(const std::string& path, bool include_trace = false);
+InferenceResult infer_spec_file(const std::string& path, bool include_trace = false, const std::string& facts_path = "");
 
 } // namespace gul

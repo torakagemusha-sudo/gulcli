@@ -63,10 +63,15 @@ int stream_to_stdout(const gul::CliConfig& c) {
     dconfig.block_size = c.block_size;
     dconfig.random_order = c.random_order;
     if (c.seed) dconfig.seed = c.seed;
+    if (!c.scenario_mode.empty()) dconfig.scenario_mode = c.scenario_mode;
+    dconfig.emit_stats = c.emit_stats;
     gul::DatasetGenerator gen(dconfig);
     std::size_t limit = c.limit_samples ? c.limit_samples : c.dataset.max_samples;
+    int rc = 0;
     gen.stream_to(std::cout, limit);
-    return 0;
+    if (c.emit_stats)
+        std::cerr << gen.stats().to_json() << "\n";
+    return rc;
 }
 
 int stream_to_tcp(const gul::CliConfig& c) {
@@ -106,6 +111,8 @@ int stream_to_tcp(const gul::CliConfig& c) {
     dconfig.block_size = c.block_size;
     dconfig.random_order = c.random_order;
     if (c.seed) dconfig.seed = c.seed;
+    if (!c.scenario_mode.empty()) dconfig.scenario_mode = c.scenario_mode;
+    dconfig.emit_stats = c.emit_stats;
     gul::DatasetGenerator gen(dconfig);
     std::size_t limit = c.limit_samples ? c.limit_samples : 0;
     gul::DatasetStreamer::stream(gen, [fd](const std::string& line) {
@@ -115,6 +122,8 @@ int stream_to_tcp(const gul::CliConfig& c) {
         send(fd, line.data(), line.size(), 0);
 #endif
     }, limit, c.random_order);
+    if (c.emit_stats)
+        std::cerr << gen.stats().to_json() << "\n";
     GUL_CLOSE_SOCKET(fd);
 #ifdef _WIN32
     WSACleanup();
@@ -149,7 +158,7 @@ int cmd_infer(const gul::CliConfig& c) {
         return 1;
     }
     try {
-        gul::InferenceResult result = gul::infer_spec_file(c.infer_file, c.infer_trace);
+        gul::InferenceResult result = gul::infer_spec_file(c.infer_file, c.infer_trace, c.facts_file);
         if (c.format_json) {
             std::cout << result.to_json() << "\n";
         } else {

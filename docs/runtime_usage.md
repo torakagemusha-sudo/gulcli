@@ -240,9 +240,10 @@ chooses a random decision, and chooses confidence values in `[0.3, 1.0]`.
 Practical constraints:
 
 - Dataset generation is not spec-driven yet; it does not consume `*.gul.json`
-  policy specs or jurisdiction trees.
-- No `--scenario`, `--stats`, balanced/adversarial mode, or sample provenance
-  flags are implemented in the native CLI today.
+  policy specs or jurisdiction trees. Native generation uses declared scenario
+  families via `--scenario balanced|adversarial` with provenance in `extensions`.
+- `--scenario balanced|adversarial` and `--stats` are available on the native CLI.
+- No Python `--scenario` flag is implemented today.
 - Native dataset streaming can run indefinitely when neither `-n <N>` nor a
   config `max_samples` value is provided. This applies to stdout and TCP paths.
 - TCP streaming with `-L <host/port>` requires a listener to be available before

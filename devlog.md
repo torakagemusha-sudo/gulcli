@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-01T18:00:00Z
+
+Completed roadmap phases 2B, 3B, and native atom port: scenario-driven dataset generation with `--scenario`/`--stats` and provenance extensions in C++; temporal trace enrichment (`ALWAYS`/`EVENTUALLY`/`UNTIL` metadata) in Python inference; native `FactEnvironment` with `--facts` on C++ infer and parity tests for atoms and scenarios.
+
 ## 2026-07-01T16:00:00Z
 
 Implemented parallel tracks A and B: Python `facts.py` with `FactEnvironment`, `--facts` CLI flag, `examples/facts/basic_facts.json`, `examples/specs/atom_role.gul.json`, and `tests/test_facts.py`; native C++ `json_io` + `runtime_io` for file-backed `validate`/`infer`, parity tests in `tests/test_native_parity.py`, and `cpp-runtime-ci.yml`. Updated docs to reflect native validate/infer and atom fact-environment requirements.
