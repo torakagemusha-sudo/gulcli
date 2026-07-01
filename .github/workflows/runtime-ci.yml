@@ -31,6 +31,14 @@ jobs:
         run: |
           python -m unittest tests.test_runtime_io
 
+      - name: Run golden output tests
+        run: |
+          python -m unittest tests.test_golden
+
+      - name: Run schema validation tests
+        run: |
+          python -m unittest tests.test_schemas
+
       - name: Smoke test validation
         run: |
           python -m gulcli validate examples/specs/basic_infer.gul.json --format json
