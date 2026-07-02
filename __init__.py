@@ -11,7 +11,7 @@ Provides:
 Patent Note: GUL v2.1 is core IP - all implementation stays local.
 """
 
-__version__ = "2.2.0-dev0"
+__version__ = "2.2.0"
 
 from .confidence import Confidence, ConfidenceOps
 from .decision import Decision, EvaluatedDecision, DecisionCombiner

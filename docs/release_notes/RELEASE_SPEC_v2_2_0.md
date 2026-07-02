@@ -335,13 +335,13 @@ Rewrite docs, examples, and release notes.
 
 Do **not** tag `2.2.0` unless all are true:
 
-- [ ] `validate` is real
-- [ ] `infer` is real
-- [ ] canonical JSON schemas exist
-- [ ] dataset generation is spec-driven
-- [ ] deterministic tests pass
-- [ ] README matches implementation
-- [ ] packaged install works
+- [x] `validate` is real
+- [x] `infer` is real
+- [x] canonical JSON schemas exist
+- [x] dataset generation is spec-driven
+- [x] deterministic tests pass
+- [x] README matches implementation
+- [x] packaged install works
 
 If only docs and minor cleanup land, tag `2.1.1` instead.
 

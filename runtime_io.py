@@ -13,7 +13,7 @@ from .expr import Predicate
 from .facts import FactEnvironment
 from .inference import GULInferenceEngine
 
-RUNTIME_VERSION = "2.2.0-dev0"
+RUNTIME_VERSION = "2.2.0"
 
 _VALID_DECISIONS = {d.value for d in Decision}
 _BINARY_TAGS = {"and_", "or_", "sequential", "parallel", "implies", "until"}

@@ -18,6 +18,7 @@ set(GUL_SOURCES
   src/runtime_io.cpp
   src/fact_environment.cpp
   src/scenarios.cpp
+  src/spec_profile.cpp
   src/cli.cpp
   src/main.cpp
 )
@@ -28,6 +29,10 @@ target_compile_features(gul PRIVATE cxx_std_17)
 
 if(WIN32)
   target_link_libraries(gul PRIVATE ws2_32)
+endif()
+
+if(MINGW)
+  target_link_options(gul PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
 install(TARGETS gul RUNTIME DESTINATION bin)

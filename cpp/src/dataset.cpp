@@ -1,5 +1,6 @@
 #include "gul/dataset.hpp"
 #include "gul/scenarios.hpp"
+#include "gul/spec_profile.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <random>
@@ -63,6 +64,8 @@ std::string DatasetSample::to_json_line() const {
 
 DatasetGenerator::DatasetGenerator(DatasetConfig config)
     : config_(std::move(config)) {
+    if (!config_.spec_path.empty())
+        spec_profile_ = load_spec_profile(config_.spec_path);
     if (config_.seed != 0)
         rng_.seed(static_cast<std::mt19937::result_type>(config_.seed));
     else
@@ -82,7 +85,8 @@ DatasetSample DatasetGenerator::next_sample() {
         family = ScenarioRegistry::pick_balanced(sample_count_);
 
     ScenarioSample generated = ScenarioRegistry::generate(
-        family, rng_, config_.seed, sample_count_);
+        family, rng_, config_.seed, sample_count_,
+        spec_profile_ ? &(*spec_profile_) : nullptr);
     if (config_.emit_stats)
         stats_.record(generated.family_name, generated.sample.decision);
     sample_count_++;

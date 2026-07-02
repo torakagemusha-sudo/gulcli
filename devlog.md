@@ -1,5 +1,13 @@
 # Devlog
 
+## 2026-07-02T06:40:00Z
+
+Rebuilt checked-in `gul.exe` via mingw-w64 cross-compile (static libgcc/libstdc++), added `cpp/scripts/build-gul-exe.sh`, Windows `build-and-smoke-windows` job in `cpp-runtime-ci.yml`, updated `cli_bridge` to resolve root `gul.exe`. Merged v2.2.0 work and tagged release `2.2.0`.
+
+## 2026-07-02T05:20:00Z
+
+Fixed CI failures: bundled `schema_validate` as installable top-level module (`py-modules` in `pyproject.toml`), corrected `package-ci.yml` to use `python -m build`, consolidated `runtime-ci` to `unittest discover`. Implemented native `--spec` for spec-linked dataset provenance, bumped version to `2.2.0`, added release notes and marked RELEASE_SPEC §8 criteria complete.
+
 ## 2026-07-01T18:00:00Z
 
 Completed roadmap phases 2B, 3B, and native atom port: scenario-driven dataset generation with `--scenario`/`--stats` and provenance extensions in C++; temporal trace enrichment (`ALWAYS`/`EVENTUALLY`/`UNTIL` metadata) in Python inference; native `FactEnvironment` with `--facts` on C++ infer and parity tests for atoms and scenarios.

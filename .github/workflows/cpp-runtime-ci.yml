@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  build-and-test-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,3 +33,32 @@ jobs:
       - name: Run native parity tests
         run: |
           python -m unittest tests.test_native_parity tests.test_dataset_scenarios
+
+  build-and-smoke-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build native CLI
+        run: |
+          cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build cpp/build --config Release
+
+      - name: Smoke test validate
+        shell: pwsh
+        run: |
+          $gul = Get-ChildItem -Path cpp/build -Recurse -Filter gul.exe | Select-Object -First 1
+          & $gul.FullName validate examples/specs/basic_infer.gul.json --format json
+
+      - name: Smoke test infer
+        shell: pwsh
+        run: |
+          $gul = Get-ChildItem -Path cpp/build -Recurse -Filter gul.exe | Select-Object -First 1
+          & $gul.FullName infer examples/specs/basic_infer.gul.json --format json
+
+      - name: Smoke test dataset generation
+        shell: pwsh
+        run: |
+          $gul = Get-ChildItem -Path cpp/build -Recurse -Filter gul.exe | Select-Object -First 1
+          $out = & $gul.FullName -oneshot -T -n 3 --scenario balanced --seed 42
+          if (($out | Measure-Object -Line).Lines -ne 3) { throw "expected 3 samples" }

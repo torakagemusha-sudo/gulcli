@@ -13,7 +13,7 @@
 namespace gul {
 namespace {
 
-constexpr const char* RUNTIME_VERSION = "2.2.0-dev0";
+constexpr const char* RUNTIME_VERSION = "2.2.0";
 const std::unordered_set<std::string> kValidDecisions = {
     "permit", "deny", "defer", "abstain"
 };

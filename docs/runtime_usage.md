@@ -234,16 +234,17 @@ Additional bridge constraints:
 
 The C++ dataset generator emits JSON Lines records with `entity`, `predicate`,
 `context_confidence`, `decision`, `confidence`, and optional `evidence` fields.
-The current generator samples from fixed built-in entity and predicate pools,
-chooses a random decision, and chooses confidence values in `[0.3, 1.0]`.
+Generation uses declared scenario families and optional GUL spec linkage.
 
 Practical constraints:
 
-- Dataset generation is not spec-driven yet; it does not consume `*.gul.json`
-  policy specs or jurisdiction trees. Native generation uses declared scenario
-  families via `--scenario balanced|adversarial` with provenance in `extensions`.
-- `--scenario balanced|adversarial` and `--stats` are available on the native CLI.
-- No Python `--scenario` flag is implemented today.
+- Native generation uses scenario families via `--scenario balanced|adversarial`
+  with provenance in `extensions`. Pass `--spec <path>` to link samples to a
+  `*.gul.json` policy spec (`source_spec_id` like `spec:basic_infer`) and derive
+  permit-path baseline decisions from spec inference.
+- `--scenario balanced|adversarial`, `--spec <path>`, and `--stats` are available
+  on the native CLI.
+- No Python `--scenario` or `--spec` flag is implemented today.
 - Native dataset streaming can run indefinitely when neither `-n <N>` nor a
   config `max_samples` value is provided. This applies to stdout and TCP paths.
 - TCP streaming with `-L <host/port>` requires a listener to be available before

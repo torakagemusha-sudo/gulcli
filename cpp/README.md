@@ -1,23 +1,47 @@
-# GUL v2.1 — C++ CLI
+# GUL v2.2.0 — C++ CLI
 
 Governed Uncertainty Logic formal system and constraint engine with a CLI for dataset streaming (ML training).
 
 ## Build
 
+### Linux / macOS
+
 ```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+cmake --build cpp/build
 ```
 
-Executable: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
+Executable: `cpp/build/gul`.
+
+On Linux CI, use `g++-12` if the default compiler cannot link `libstdc++`:
+
+```bash
+cmake -S cpp -B cpp/build -DCMAKE_CXX_COMPILER=g++-12
+cmake --build cpp/build
+```
+
+### Windows
+
+```bash
+cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+cmake --build cpp/build --config Release
+```
+
+Executable: `cpp/build/Release/gul.exe` or `cpp/build/gul.exe`.
+
+### Cross-compile `gul.exe` on Linux (mingw-w64)
+
+```bash
+bash cpp/scripts/build-gul-exe.sh
+```
+
+Writes a portable `gul.exe` to the repository root (static libgcc/libstdc++).
 
 ## Usage
 
 Current boundary: dataset streaming and file-backed `validate` / `infer` are
 implemented for supported composition tags when built from `cpp/`. Native `atom`
-evaluation is not implemented; use `python3 -m gulcli infer --facts ...` for
-atom-backed specs.
+evaluation supports `--facts <path>` on `infer`.
 
 ### Dataset streaming (ML training)
 
@@ -47,8 +71,11 @@ atom-backed specs.
 | `-random` | Randomize sample order |
 | `-block <N>` | Block size for streaming (default 64) |
 | `-seed <N>` | RNG seed (0 = random) |
+| `--scenario <mode>` | `balanced` or `adversarial` scenario selection |
+| `--spec <path>` | Link samples to a `*.gul.json` spec (`source_spec_id`) |
+| `--stats` | Emit scenario/decision distribution JSON to stderr |
 | `validate [file]` | Validate a GUL spec file (`--format json` supported) |
-| `infer [file]` | Run inference on an expression file (`--format json`, `--trace` supported) |
+| `infer [file]` | Run inference (`--format json`, `--trace`, `--facts` supported) |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 
@@ -76,6 +103,7 @@ Each line is a JSON object with:
 - `decision`: `"permit"` | `"deny"` | `"defer"` | `"abstain"`
 - `confidence`: number in [0, 1]
 - `evidence`: array of strings
+- `extensions` (optional): provenance (`schema`, `scenario`, `source_spec_id`, `seed`, `generator_version`, `sample_index`)
 
 Suitable for training models on GUL decision/confidence prediction.
 

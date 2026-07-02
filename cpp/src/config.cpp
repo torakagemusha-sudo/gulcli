@@ -99,6 +99,13 @@ CliConfig parse_args(int argc, char* argv[]) {
             c.dataset.emit_stats = true;
             continue;
         }
+        if (arg == "--spec") {
+            if (i + 1 < argc) {
+                c.spec_path = argv[++i];
+                c.dataset.spec_path = c.spec_path;
+            }
+            continue;
+        }
         if (arg == "validate") {
             c.validate_only = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') c.validate_file = argv[++i];

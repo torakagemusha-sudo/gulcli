@@ -11,5 +11,5 @@
     "jurisdiction": "org.root.teamA",
     "schema": "gul.inference.result/1",
     "trace": [],
-    "version": "2.2.0-dev0"
+    "version": "2.2.0"
 }

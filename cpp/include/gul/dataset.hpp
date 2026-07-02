@@ -6,10 +6,12 @@
 #include "gul/entity.hpp"
 #include "gul/predicate.hpp"
 #include "gul/policy_expr.hpp"
+#include "gul/spec_profile.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -25,6 +27,7 @@ struct DatasetConfig {
     bool json_lines = true;           // one JSON object per line (NDJSON)
     std::string scenario_mode = "balanced";  // balanced | adversarial
     bool emit_stats = false;
+    std::string spec_path;            // optional GUL spec for provenance + baseline
 };
 
 struct DatasetStats {
@@ -73,6 +76,7 @@ private:
     std::mt19937 rng_;
     std::size_t sample_count_ = 0;
     DatasetStats stats_;
+    std::optional<SpecProfile> spec_profile_;
 };
 
 /** Stream dataset over TCP (for -deepgul -L host/port). */

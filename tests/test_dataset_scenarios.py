@@ -27,6 +27,22 @@ class NativeDatasetScenarioTests(unittest.TestCase):
             self.assertIn("scenario", line["extensions"])
             self.assertEqual(line["extensions"]["seed"], 42)
 
+    def test_spec_flag_links_source_spec_id(self):
+        spec = REPO_ROOT / "examples/specs/basic_infer.gul.json"
+        proc = subprocess.run(
+            [
+                str(GUL_BIN), "-oneshot", "-T", "-n", "1",
+                "--scenario", "balanced", "--seed", "1",
+                "--spec", str(spec),
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        line = json.loads(proc.stdout.strip())
+        self.assertEqual(line["extensions"]["source_spec_id"], "spec:basic_infer")
+
     def test_stats_flag_emits_distribution(self):
         proc = subprocess.run(
             [str(GUL_BIN), "-oneshot", "-T", "-n", "7", "--scenario", "balanced", "--stats", "--seed", "7"],

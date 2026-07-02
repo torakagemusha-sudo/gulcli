@@ -1,4 +1,5 @@
 #include "gul/scenarios.hpp"
+#include "gul/spec_profile.hpp"
 #include "gul/predicate.hpp"
 #include <sstream>
 
@@ -50,15 +51,17 @@ ScenarioSample ScenarioRegistry::generate(
     ScenarioFamily family,
     std::mt19937& rng,
     std::uint64_t seed,
-    std::size_t index) {
+    std::size_t index,
+    const SpecProfile* spec) {
     Entity agent("agent", "alice");
     Entity resource("resource", "doc-policy");
     Entity context("context", "workspace:prod");
     const std::string family_name = family_names()[static_cast<std::size_t>(family) % family_names().size()];
+    const std::string spec_id = spec ? ("spec:" + spec->spec_id) : ("scenario:" + family_name);
     ScenarioSample out{
         DatasetSample{agent, has_role(agent, "reviewer"), 0.0, Decision::PERMIT, Confidence(0.0), {}},
         family_name,
-        "scenario:" + family_name,
+        spec_id,
     };
 
     switch (family) {
@@ -139,6 +142,12 @@ ScenarioSample ScenarioRegistry::generate(
     out.sample.provenance_seed = seed;
     out.sample.provenance_generator_version = DATASET_GENERATOR_VERSION;
     out.sample.provenance_index = index;
+
+    if (spec && spec->has_baseline && family == ScenarioFamily::PermitPath) {
+        out.sample.decision = spec->baseline_decision;
+        out.sample.confidence = Confidence(spec->baseline_confidence);
+        out.sample.evidence.push_back("derived from spec inference: " + spec->spec_id);
+    }
     return out;
 }
 

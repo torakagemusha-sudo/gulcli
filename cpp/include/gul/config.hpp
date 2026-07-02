@@ -30,6 +30,7 @@ struct CliConfig {
     std::string facts_file;
     std::string scenario_mode;
     bool emit_stats = false;
+    std::string spec_path;
     bool help = false;
     bool version = false;
     std::vector<std::string> positional;

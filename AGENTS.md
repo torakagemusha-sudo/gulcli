@@ -79,8 +79,9 @@ WINEDEBUG=-all DISPLAY= wine gul.exe [options]
 
 ### Test / Build
 
-- **Python tests:** `python3 -m unittest tests.test_runtime_io`
+- **Python tests:** `python3 -m unittest discover -s tests -v`
 - **CI:** `.github/workflows/runtime-ci.yml` tests Python 3.10 through 3.13
+- **Schema tests:** `schema_validate` ships as a bundled top-level module (installed with `pip install -e .`)
 - **Python package build backend:** setuptools via `pyproject.toml`
 - **Native binary:** the checked-in `gul.exe` is pre-compiled; there is no
   required native build step for ordinary runtime validation

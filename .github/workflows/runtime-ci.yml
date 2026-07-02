@@ -29,23 +29,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          python -m unittest tests.test_runtime_io
-
-      - name: Run golden output tests
-        run: |
-          python -m unittest tests.test_golden
-
-      - name: Run schema validation tests
-        run: |
-          python -m unittest tests.test_schemas
-
-      - name: Run temporal trace tests
-        run: |
-          python -m unittest tests.test_temporal
-
-      - name: Run fact environment tests
-        run: |
-          python -m unittest tests.test_facts
+          python -m unittest discover -s tests -v
 
       - name: Smoke test validation
         run: |

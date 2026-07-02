@@ -38,7 +38,10 @@ void print_help() {
                  "  -n, --limit <N>       Limit to N samples\n"
                  "  -random               Randomize sample order\n"
                  "  -block <N>            Block size for streaming (default 64)\n"
-                 "  -seed <N>             RNG seed (0 = random)\n\n"
+                 "  -seed <N>             RNG seed (0 = random)\n"
+                 "  --scenario <mode>     balanced | adversarial\n"
+                 "  --spec <path>         GUL spec for provenance and baseline inference\n"
+                 "  --stats               Emit scenario/decision distribution to stderr\n\n"
                  "Config:\n"
                  "  -config, --config <path>  Load config file (key=value or key: value)\n\n"
                  "Commands:\n"
@@ -55,7 +58,7 @@ void print_help() {
 }
 
 void print_version() {
-    std::cout << "GUL 2.1\n";
+    std::cout << "GUL 2.2.0\n";
 }
 
 int stream_to_stdout(const gul::CliConfig& c) {
@@ -65,6 +68,7 @@ int stream_to_stdout(const gul::CliConfig& c) {
     if (c.seed) dconfig.seed = c.seed;
     if (!c.scenario_mode.empty()) dconfig.scenario_mode = c.scenario_mode;
     dconfig.emit_stats = c.emit_stats;
+    if (!c.spec_path.empty()) dconfig.spec_path = c.spec_path;
     gul::DatasetGenerator gen(dconfig);
     std::size_t limit = c.limit_samples ? c.limit_samples : c.dataset.max_samples;
     int rc = 0;
@@ -113,6 +117,7 @@ int stream_to_tcp(const gul::CliConfig& c) {
     if (c.seed) dconfig.seed = c.seed;
     if (!c.scenario_mode.empty()) dconfig.scenario_mode = c.scenario_mode;
     dconfig.emit_stats = c.emit_stats;
+    if (!c.spec_path.empty()) dconfig.spec_path = c.spec_path;
     gul::DatasetGenerator gen(dconfig);
     std::size_t limit = c.limit_samples ? c.limit_samples : 0;
     gul::DatasetStreamer::stream(gen, [fd](const std::string& line) {
@@ -168,7 +173,7 @@ int cmd_infer(const gul::CliConfig& c) {
         return 0;
     } catch (const std::exception& ex) {
         if (c.format_json) {
-            std::cout << "{\"schema\":\"gul.inference.result/1\",\"version\":\"2.2.0-dev0\",\"error\":\""
+            std::cout << "{\"schema\":\"gul.inference.result/1\",\"version\":\"2.2.0\",\"error\":\""
                       << ex.what() << "\"}\n";
         } else {
             std::cerr << "infer error: " << ex.what() << "\n";

@@ -29,5 +29,5 @@
     "ok": true,
     "schema": "gul.validation.result/1",
     "source": "examples/specs/basic_infer.gul.json",
-    "version": "2.2.0-dev0"
+    "version": "2.2.0"
 }
