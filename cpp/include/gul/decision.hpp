@@ -24,6 +24,13 @@ inline const char* to_string(Decision d) {
     return "abstain";
 }
 
+inline Decision decision_from_string(const std::string& value) {
+    if (value == "permit") return Decision::PERMIT;
+    if (value == "deny") return Decision::DENY;
+    if (value == "defer") return Decision::DEFER;
+    return Decision::ABSTAIN;
+}
+
 struct JurisdictionId; // forward
 
 struct EvaluatedDecision {

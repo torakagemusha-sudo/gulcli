@@ -4,6 +4,7 @@
 #include "gul/dataset.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -11,7 +12,9 @@
 
 namespace gul {
 
-constexpr const char* DATASET_GENERATOR_VERSION = "2.2.0-dev0";
+struct SpecProfile;
+
+constexpr const char* DATASET_GENERATOR_VERSION = "2.2.0";
 
 enum class ScenarioFamily {
     PermitPath,
@@ -37,7 +40,8 @@ public:
         ScenarioFamily family,
         std::mt19937& rng,
         std::uint64_t seed,
-        std::size_t index);
+        std::size_t index,
+        const SpecProfile* spec = nullptr);
     static ScenarioFamily pick_balanced(std::size_t index);
     static ScenarioFamily pick_adversarial(std::mt19937& rng);
 };

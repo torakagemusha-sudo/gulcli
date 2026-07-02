@@ -5,11 +5,17 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMAS = Path(__file__).resolve().parents[1] / "schemas"
+
+def _schemas_dir() -> Path:
+    here = Path(__file__).resolve().parent
+    for candidate in (here / "schemas", here / "gulcli" / "schemas"):
+        if candidate.is_dir():
+            return candidate
+    raise FileNotFoundError("schemas directory not found for schema_validate")
 
 
 def load_schema(name: str) -> dict[str, Any]:
-    return json.loads((SCHEMAS / name).read_text(encoding="utf-8"))
+    return json.loads((_schemas_dir() / name).read_text(encoding="utf-8"))
 
 
 def validate_against_schema(data: Any, schema: dict[str, Any], path: str = "$") -> list[str]:

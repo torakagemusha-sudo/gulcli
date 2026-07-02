@@ -18,6 +18,7 @@ set(GUL_SOURCES
   src/runtime_io.cpp
   src/fact_environment.cpp
   src/scenarios.cpp
+  src/spec_profile.cpp
   src/cli.cpp
   src/main.cpp
 )
