@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-02T07:00:00Z
+
+Added explicit `permissions: contents: read` to all GitHub Actions workflows (`runtime-ci`, `package-ci`, `cpp-runtime-ci`) to satisfy CodeQL least-privilege check.
+
 ## 2026-07-02T06:40:00Z
 
 Rebuilt checked-in `gul.exe` via mingw-w64 cross-compile (static libgcc/libstdc++), added `cpp/scripts/build-gul-exe.sh`, Windows `build-and-smoke-windows` job in `cpp-runtime-ci.yml`, updated `cli_bridge` to resolve root `gul.exe`. Merged v2.2.0 work and tagged release `2.2.0`.
