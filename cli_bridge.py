@@ -32,6 +32,7 @@ def find_gul_exe(gul_exe_path: Optional[str] = None) -> str:
     # Default relative to this package: gul/cpp/build/Release/gul.exe (Windows) or build/gul (Unix)
     this_dir = Path(__file__).resolve().parent
     for candidate in [
+        this_dir / "gul.exe",
         this_dir / "cpp" / "build" / "Release" / "gul.exe",
         this_dir / "cpp" / "build" / "gul.exe",
         this_dir / "cpp" / "build" / "gul",

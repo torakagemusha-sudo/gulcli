@@ -31,4 +31,8 @@ if(WIN32)
   target_link_libraries(gul PRIVATE ws2_32)
 endif()
 
+if(MINGW)
+  target_link_options(gul PRIVATE -static-libgcc -static-libstdc++)
+endif()
+
 install(TARGETS gul RUNTIME DESTINATION bin)

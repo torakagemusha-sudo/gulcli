@@ -11,6 +11,7 @@ build/
 
 # C++ build artifacts
 cpp/build/
+cpp/build-mingw/
 cpp/**/*.obj
 cpp/**/*.exe
 cpp/**/*.dll
