@@ -1,5 +1,13 @@
 # Devlog
 
+## 2026-07-03T12:10:00Z
+
+Merged remaining `cursor/*` documentation branches into `main`, resolving conflicts in favor of the current v2.2.0 implementation (native file-backed `validate`/`infer`, `--facts`, scenario-driven dataset generation). Preserved historical devlog entries from security review and verification branches.
+
+## 2026-07-01T20:00:00Z
+
+Verified "ALL 3" deliverables merged on `main` (PR #15): scenario-driven native datasets (`--scenario`, `--stats`, provenance), Python temporal trace enrichment (`ALWAYS`/`EVENTUALLY`/`UNTIL`), and C++ `FactEnvironment` with `--facts` infer parity. Full test suite passes (23 tests).
+
 ## 2026-07-02T07:00:00Z
 
 Added explicit `permissions: contents: read` to all GitHub Actions workflows (`runtime-ci`, `package-ci`, `cpp-runtime-ci`) to satisfy CodeQL least-privilege check.
@@ -27,6 +35,18 @@ Implemented Phase 1 production hardening: golden fixtures for `basic_infer` and 
 ## 2026-07-01T12:00:00Z
 
 Consolidated open documentation PRs (#6, #7, #9) into a single branch: merged capability matrix and dataset-generation boundaries into `docs/runtime_usage.md`, hybrid `AGENTS.md` (Python runtime + C++ build + Wine/`gul.exe` paths), PR #9 README/cpp README updates (native placeholder caveats, bounded streaming, removed stale Lean references), and removed all public mentions of external integration frameworks from README, `pyproject.toml`, and package docstring. Wrote roadmap design spec at `docs/superpowers/specs/2026-07-01-gulcli-roadmap-design.md` covering v2.2.0 native closure (A), Python runtime depth (B), and production hardening (C).
+
+## 2026-06-26T09:17:32Z
+
+Performed scheduled at-rest security review (vulnerability scan). Explored entire Python and C++ codebase, traced input flows, validated subprocess execution paths, and tested recursion depth limits. Identified 2 MEDIUM-severity findings: (1) arbitrary binary execution via unvalidated `GUL_EXE_PATH` environment variable in `cli_bridge.py`, and (2) unbounded recursion DoS in `runtime_io.py` expression tree validation/inference. Both confirmed with proof-of-concept reproduction.
+
+## 2026-06-06T08:01:31Z
+
+Handled the follow-up reminder to commit and push if appropriate. Verified the working tree contained only devlog updates, added this turn's UTC devlog entry, and prepared the devlog-only change for commit and push on the current branch.
+
+## 2026-06-06T08:00:17Z
+
+Performed security review automation for PR #7. Inspected the documentation-only diff, checked prior GitHub review threads, traced referenced runtime/bridge/CLI paths for attacker-controlled input to security sinks, and posted the resulting assessment without pushing code changes.
 
 ## 2026-05-18T16:03:04Z
 
