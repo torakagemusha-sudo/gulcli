@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-03T13:21:00Z
+
+Merged PR #19 into `main` (consolidated remaining `cursor/*` documentation branches). All 15 `cursor/*` branches are fully merged into `main`; no open PRs remain. Remote branch deletion is blocked by repository rules (`GH013: Cannot delete this branch`).
+
 ## 2026-07-03T12:10:00Z
 
 Merged remaining `cursor/*` documentation branches into `main`, resolving conflicts in favor of the current v2.2.0 implementation (native file-backed `validate`/`infer`, `--facts`, scenario-driven dataset generation). Preserved historical devlog entries from security review and verification branches.
