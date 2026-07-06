@@ -181,9 +181,23 @@ JSON spec files under `examples/specs/` validate and run inference without the C
 ```bash
 python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
 python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+python3 -m gulcli infer examples/specs/atom_role.gul.json \
+  --facts examples/facts/basic_facts.json --format json --trace
 ```
 
 The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). When the native `gul` CLI is installed, `cli_validate` / `cli_infer` try it first and fall back to this runtime if the executable cannot be started.
+
+Fact-backed `atom` predicates use `examples/facts/basic_facts.json` as the
+reference shape. Supported fact keys are `roles`, `attributes`, `belongs_to`,
+`in_context`, `custom`, and optional `now` for time predicates.
+
+```python
+from pathlib import Path
+from gulcli.runtime_io import infer_file, load_facts
+
+facts = load_facts(Path("examples/facts/basic_facts.json"))
+result = infer_file(Path("examples/specs/atom_role.gul.json"), facts=facts)
+```
 
 For source-verified command boundaries, bridge fallback behavior, and dataset
 generation caveats, see `docs/runtime_usage.md`.
@@ -407,8 +421,8 @@ The C++ binary provides native GUL data structures and streams ML training
 samples as JSON Lines. It can write to stdout or push directly to a TCP socket.
 
 Current boundary: native dataset streaming and file-backed `validate` / `infer`
-are implemented for supported composition tags when built from `cpp/`. Use
-`python3 -m gulcli infer --facts ...` for `atom` evaluation.
+are implemented when built from `cpp/`. Native `infer` supports atom evaluation
+with `--facts <path>`.
 
 ### Build
 
@@ -446,9 +460,14 @@ nc -l 1234                              # listener (Linux/macOS)
 gul -deepgul -L 127.0.0.1/1234 -n 500
 gul -oneshot -T -L 127.0.0.1/1234 -n 500
 
-# Native validate/infer (composition tags; atoms require Python --facts)
+# Native validate/infer
 gul validate examples/specs/basic_infer.gul.json --format json
 gul infer examples/specs/basic_infer.gul.json --format json --trace
+gul infer examples/specs/atom_role.gul.json --facts examples/facts/basic_facts.json --format json
+
+# Scenario-driven dataset generation
+gul -oneshot -T -n 100 --scenario balanced --seed 42
+gul -oneshot -T -n 50 --scenario adversarial --spec examples/specs/basic_infer.gul.json --stats
 ```
 
 ### CLI options
@@ -462,10 +481,13 @@ gul infer examples/specs/basic_infer.gul.json --format json --trace
 | `-random`, `--random` | Randomize sample order |
 | `-block <N>`, `--block <N>` | Block size for streaming (default: 64) |
 | `-seed <N>`, `--seed <N>` | RNG seed; 0 means random |
+| `--scenario <mode>` | Scenario family selection: `balanced` or `adversarial` |
+| `--spec <path>` | Link samples to a `*.gul.json` spec and emit `source_spec_id` provenance |
+| `--stats` | Emit scenario and decision distribution JSON to stderr |
 | `-config <path>` | Load config file (key=value or key: value format) |
 | `-L <host/port>` | Stream to TCP endpoint, e.g. `127.0.0.1/1234` or `127.0.0.1:1234` |
 | `validate [file]` | Validate a GUL spec file (`--format json` supported) |
-| `infer [file]` | Run inference (`--format json`, `--trace` supported; atoms need Python `--facts`) |
+| `infer [file]` | Run inference (`--format json`, `--trace`, `--facts` supported) |
 | `-h`, `--help` | Print usage |
 | `-v`, `--version` | Print version |
 
@@ -506,12 +528,15 @@ Each line of output is a self-contained JSON object (JSON Lines / NDJSON):
 | `decision` | string | `permit` \| `deny` \| `defer` \| `abstain` |
 | `confidence` | float [0,1] | Confidence in the decision |
 | `evidence` | array of strings | Reasoning chain |
+| `extensions` | object, optional | Dataset provenance: `schema`, `scenario`, `source_spec_id`, `seed`, `generator_version`, `sample_index` |
 
 Treat each line as an independent JSON document. Confidence values are guaranteed to be in [0, 1].
 
 ### Python bridge
 
 `cli_bridge.py` wraps the binary for use from Python. The executable is resolved in order: `gul_exe_path` argument → `GUL_EXE_PATH` env var → package-local `cpp/build/` artifacts → `gul` on PATH.
+The dataset helpers expose the common streaming flags, but they do not expose
+native `--scenario`, `--spec`, or `--stats` today.
 
 ```python
 from gulcli import generate_dataset, stream_dataset, cli_validate, cli_infer, find_gul_exe
@@ -557,7 +582,8 @@ print(result.returncode, result.stdout, result.stderr)
 | `inference.py` | `GULInferenceEngine`, `InferenceTrace` | All formal inference rules with full audit trace; AND, OR, NOT, sequential, parallel, conditional, threshold, jurisdiction check |
 | `policy.py` | `GULGovernanceDecision`, `GULGovernancePolicy` | Threshold-based policy evaluation; decision history; audit summary |
 | `expr.py` | `Entity`, `Predicate`, `PolicyExpr`, DSL constructors | JSON-serializable AST for policy expressions |
-| `runtime_io.py` | `validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file` | JSON spec validation and inference; powers `python -m gulcli` |
+| `facts.py` | `FactEnvironment` | Runtime bindings for atom predicate evaluation |
+| `runtime_io.py` | `validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file`, `load_facts` | JSON spec validation and inference; powers `python -m gulcli` |
 | `cli_bridge.py` | `find_gul_exe`, `generate_dataset`, `stream_dataset`, `cli_validate`, `cli_infer` | Subprocess wrapper around `gul`; validate/infer fall back to `runtime_io` when the CLI is unavailable |
 
 ---

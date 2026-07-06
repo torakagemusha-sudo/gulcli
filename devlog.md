@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-06T16:06:02Z
+
+Ran scheduled engineering documentation automation. Refreshed runtime docs and README to match v2.2.0 shipped behavior for native file-backed `validate`/`infer`, fact-backed `atom` evaluation with `--facts`, scenario-driven dataset provenance, and current CLI bridge limits.
+
 ## 2026-07-03T13:21:00Z
 
 Merged PR #19 into `main` (consolidated remaining `cursor/*` documentation branches). All 15 `cursor/*` branches are fully merged into `main`; no open PRs remain. Remote branch deletion is blocked by repository rules (`GH013: Cannot delete this branch`).

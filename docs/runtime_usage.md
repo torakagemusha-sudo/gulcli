@@ -1,11 +1,12 @@
 # GUL Runtime Usage
 
-This guide documents the executable Python runtime introduced for the `v2.2.0`
-workstream. It covers file-backed validation and inference for canonical GUL
-JSON specs, the public Python helper surface, and how that runtime relates to
-the native `gul` CLI bridge.
+This guide documents the executable runtime paths for canonical GUL JSON specs.
+It covers Python validation and inference, native `gul validate` / `gul infer`,
+fact-backed `atom` evaluation, dataset generation boundaries, and the Python CLI
+bridge.
 
-It is the current route to real file-backed validation and inference. The native C++ CLI still owns dataset streaming, but its `validate` and `infer` commands are placeholders until the C++ command surface is upgraded.
+Use `python3 -m gulcli` for portable automation. Use native `gul` commands when
+you have built `cpp/build/gul` or provided another launchable binary.
 
 ---
 
@@ -55,22 +56,22 @@ Validation normalizes the complete input with sorted object keys and includes an
 
 ## Capability Matrix
 
-Use the Python runtime for file-backed validation and inference in Linux
+Use the Python runtime for portable validation and inference in Linux
 automation. The native C++ CLI supports dataset streaming and file-backed
-`validate` / `infer` for composition tags when built from source.
+`validate` / `infer` when built from source.
 
 | Surface | Use for | Verified behavior | Constraints |
 |---------|---------|-------------------|-------------|
 | `python3 -m gulcli validate` | Validate JSON GUL specs | Loads the file, validates supported tags, emits `gul.validation.result/1` | Python `3.10+`; current validator emits errors, not warnings |
-| `python3 -m gulcli infer` | Evaluate executable JSON GUL specs | Loads the file, evaluates supported decision/composition tags, optionally emits trace; use `--facts` for `atom` nodes | `atom` nodes require `--facts` or an in-memory `FactEnvironment` |
+| `python3 -m gulcli infer` | Evaluate executable JSON GUL specs | Loads the file, evaluates supported tags, optionally emits trace; use `--facts` for `atom` nodes | `atom` nodes require `--facts` or an in-memory `FactEnvironment` |
 | `python3 -m gulcli.runtime_io ...` | Direct module access to the same runtime | Same validation and inference logic as the package entry point | Can emit Python's `runpy` warning; prefer `python3 -m gulcli` for automation |
-| Native `gul validate` / `gul infer` | C++ file-backed runtime | Load `*.gul.json`, validate or infer supported tags, emit schema JSON with `--format json` | `atom` execution is not implemented natively; use Python `--facts` for atoms |
+| Native `gul validate` / `gul infer` | C++ file-backed runtime | Load `*.gul.json`, validate or infer supported tags, emit schema JSON with `--format json`; `infer` accepts `--facts` | Requires a launchable native binary |
 | Native `gul -T` / `gul -deepgul` | Dataset JSON Lines streaming | Streams samples from the C++ dataset generator | Requires a launchable native binary; no Python fallback; unbounded without `-n <N>` or `max_samples` |
 | `cli_bridge.py` helpers | Python subprocess bridge | Dataset helpers call the native CLI; `validate` / `infer` fall back to Python only when the native executable cannot launch | A native command that starts and exits nonzero does not trigger fallback |
 
 This split matters for automation: `cli_validate` and `cli_infer` try the native
-executable first when available. Prefer `python3 -m gulcli` when you need `atom`
-evaluation via `--facts`.
+executable first when available. Prefer `python3 -m gulcli` when you need
+consistent Python runtime semantics across machines.
 
 ---
 
@@ -110,6 +111,45 @@ validator primarily emits errors.
 
 ---
 
+## Fact environment
+
+`atom` nodes evaluate predicates against a fact environment. Without facts,
+inference fails with an error that asks for `--facts` or `facts=`.
+
+```bash
+python3 -m gulcli infer examples/specs/atom_role.gul.json \
+  --facts examples/facts/basic_facts.json --format json --trace
+
+cpp/build/gul infer examples/specs/atom_role.gul.json \
+  --facts examples/facts/basic_facts.json --format json
+```
+
+The fact JSON shape matches `FactEnvironment.from_dict`:
+
+| Key | Shape | Used by |
+|-----|-------|---------|
+| `roles` | Object keyed by `kind:id`, values are role arrays | `has_role` |
+| `attributes` | Object keyed by `kind:id`, values are string attribute maps | `has_attribute` |
+| `belongs_to` | Array of `{ "entity": ..., "resource": ... }` objects | `belongs_to` |
+| `in_context` | Array of `{ "entity": ..., "context": ... }` objects | `in_context` |
+| `custom` | Object of boolean named checks | `custom` |
+| `now` | Optional Unix timestamp | `time_before`, `time_after` |
+
+Missing role or attribute bindings return `defer`, not `deny`; explicit
+mismatches return `deny`.
+
+Programmatic use:
+
+```python
+from pathlib import Path
+from gulcli.runtime_io import infer_file, load_facts
+
+facts = load_facts(Path("examples/facts/basic_facts.json"))
+result = infer_file(Path("examples/specs/atom_role.gul.json"), facts=facts)
+```
+
+---
+
 ## Spec Shape
 
 Runtime input can be either an expression node directly or an object with an
@@ -142,6 +182,7 @@ The runtime validates and evaluates these tags:
 | Tag | Behavior |
 |-----|----------|
 | `decision` | Creates an evaluated decision with optional `confidence`, `evidence`, and `jurisdiction` |
+| `atom` | Evaluates a predicate when `--facts` or `facts=` is supplied; raises an error without a fact environment |
 | `and_`, `or_` | Uses the GUL inference engine's logical combiners |
 | `not_` | Inverts `permit` and `deny`; preserves `defer` and `abstain` |
 | `implies` | Evaluates as `or_(not_(p1), p2)` |
@@ -150,10 +191,8 @@ The runtime validates and evaluates these tags:
 | `jurisdiction` | Keeps the child decision when `request == required` or `request` is below `required`; otherwise returns `abstain` |
 | `override` | Applies override semantics where an `abstain` override leaves the base decision unchanged |
 | `sequential`, `parallel` | Uses dependent and independent confidence composition |
-| `always`, `eventually` | Preserves the child decision and adds structural evidence |
-| `until` | Composes the two children as a sequential approximation |
-
-`atom` nodes are structurally validated but are not directly executable yet without a fact environment. Inference over an `atom` raises an error.
+| `always`, `eventually` | Preserves the child decision and records structural temporal trace metadata |
+| `until` | Composes the two children as a sequential approximation with temporal trace metadata |
 
 Binary tags (`and_`, `or_`, `sequential`, `parallel`, `implies`, `until`) use `p1` and `p2` children. Unary tags (`not_`, `always`, `eventually`) use `p`. `threshold` and `with_confidence` also use `p` plus their numeric field.
 
@@ -195,6 +234,21 @@ Important fields:
 
 Text mode prints the decision, confidence, optional jurisdiction, evidence, and trace summary. JSON mode emits the full envelope.
 
+Temporal tags are structural approximations, not full temporal model checking.
+When trace output is enabled, Python temporal evaluation includes metadata:
+
+```json
+{
+  "rule": "ALWAYS",
+  "metadata": {
+    "temporal": "always",
+    "approximation": "structural"
+  }
+}
+```
+
+See `examples/specs/temporal_always.gul.json` for a runnable temporal spec.
+
 ---
 
 ## Python API
@@ -205,18 +259,20 @@ root:
 ```python
 from pathlib import Path
 from gulcli import infer_file, validate_file
+from gulcli.runtime_io import load_facts
 
 spec = Path("examples/specs/basic_infer.gul.json")
+atom_spec = Path("examples/specs/atom_role.gul.json")
 
 validation = validate_file(spec)
 result = infer_file(spec, include_trace=True)
+atom_result = infer_file(atom_spec, facts=load_facts("examples/facts/basic_facts.json"))
 ```
 
 Lower-level helpers accept already-loaded Python data:
 
 ```python
-from pathlib import Path
-from gulcli import infer_file, validate_file
+from gulcli import evaluate_expr_data, validate_spec_data
 
 validation = validate_spec_data(payload)
 result = evaluate_expr_data(payload)
@@ -238,7 +294,7 @@ ok = cli_validate(Path("examples/specs/basic_infer.gul.json"))
 result = cli_infer(Path("examples/specs/basic_infer.gul.json"))
 ```
 
-The bridge tries the native executable first and only falls back to this Python runtime when the executable is missing or cannot be launched. Because the current C++ `validate` and `infer` commands are placeholders that start successfully, use `validate_file` / `infer_file` when you need guaranteed Python runtime semantics.
+The bridge tries the native executable first and only falls back to this Python runtime when the executable is missing or cannot be launched. A native `gul validate` or `gul infer` process that starts and exits nonzero returns its subprocess result. Use `validate_file` / `infer_file` when you need guaranteed Python runtime semantics.
 
 ---
 
@@ -307,22 +363,21 @@ Practical constraints:
 | `python: command not found` | The environment exposes Python as `python3` | Use `python3 -m ...` commands |
 | `No module named gulcli` | Package not installed in the active interpreter | Run `python3 -m pip install -e .` from the repo root |
 | `RuntimeWarning: 'gulcli.runtime_io' found in sys.modules...` | Direct module execution after package import | Prefer `python3 -m gulcli ...`; the direct module command still completes |
-| `atom nodes are structural only...` | The spec contains executable `atom` nodes | Replace atoms with `decision` nodes for current runtime execution |
-| Native `gul validate` or `gul infer` errors on atom specs | Native runtime does not evaluate atoms yet | Use `python3 -m gulcli infer --facts ...` for atom-backed specs |
+| `atom nodes are structural only...` | The spec contains executable `atom` nodes but no facts were supplied | Re-run with `--facts <path>` or call `infer_file(..., facts=load_facts(path))` |
+| Native `gul infer` errors on atom specs | No fact environment was supplied, or the binary is older than v2.2.0 | Rebuild the native CLI and pass `--facts <path>` |
 | `gul` or `wine` is missing | Native Windows streamer is not available in the current environment | Use the Python runtime for validate/infer, or install Wine / provide `GUL_EXE_PATH` for dataset generation |
 | Empty `trace` in inference output | `--trace` / `include_trace=True` was not requested | Re-run inference with trace enabled |
 
 ---
 
-- the existing C++ `validate` / `infer` commands are placeholders and are separate from this Python runtime
-- `atom` execution requires a future fact environment or evaluator backend
+## Known limitations
 
-- `atom` execution still requires a future fact environment or evaluator backend.
 - Temporal tags are structural approximations, not full temporal model checking.
-- The Python runtime covers validation and inference; dataset streaming still
-  depends on the native CLI.
-- Native `gul validate` and `gul infer` are file-backed for composition tags but do not evaluate `atom` nodes without a fact environment.
-- Dataset generation currently uses built-in sample pools rather than declared
-  scenario families or source specifications.
+- Dataset generation depends on the native CLI. There is no Python dataset
+  generator fallback.
+- Native `gul infer` evaluates `atom` nodes only when a fact environment is
+  supplied with `--facts`.
+- `cli_bridge.generate_dataset` and `cli_bridge.stream_dataset` do not expose
+  native `--scenario`, `--spec`, or `--stats` flags today.
 - `gul.exe` is a Windows binary. On Linux it requires Wine, and Wine may not be
   installed in all automation environments.
