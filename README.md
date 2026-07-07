@@ -577,9 +577,9 @@ print(result.returncode, result.stdout, result.stderr)
 
 Post-merge project updates and Linear backfill records live in
 `docs/PROJECT_UPDATES.md`. The current record covers the PR #20 runtime
-documentation refresh and the PR #21 project-tracking follow-up, with the fields
-needed to create or update the related Linear project when Linear access is
-available.
+documentation refresh plus the PR #21 and PR #22 project-tracking follow-ups,
+with the fields needed to create or update the related Linear project when
+Linear access is available.
 
 ---
 
