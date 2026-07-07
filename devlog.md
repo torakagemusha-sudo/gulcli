@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-07T08:37:54Z
+
+Reviewed merged PR #21 and extended the Linear-ready project backfill because Linear access was still unavailable in the automation environment. Added the PR #21 project update payload to `docs/PROJECT_UPDATES.md` and refreshed README pointers so the related Linear project can be created or updated from the repo ledger.
+
 ## 2026-07-07T07:42:51Z
 
 Reviewed merged PR #20 and recorded a Linear-ready project backfill in `docs/PROJECT_UPDATES.md` because Linear access was unavailable in the automation environment. Linked the project update record from README files so the runtime documentation refresh can be synced into Linear when credentials are available.
