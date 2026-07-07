@@ -46,7 +46,7 @@ evaluation supports `--facts <path>` on `infer`.
 Project updates for runtime and native CLI documentation work are tracked in
 `../docs/PROJECT_UPDATES.md`. The current Linear-ready record covers the PR #20
 documentation refresh for fact-backed infer, scenario dataset flags, and bridge
-limits.
+limits, plus the PR #21 project-tracking follow-up.
 
 ### Dataset streaming (ML training)
 
