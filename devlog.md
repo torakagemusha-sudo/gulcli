@@ -1,5 +1,9 @@
 # Devlog
 
+## 2026-07-07T07:42:51Z
+
+Reviewed merged PR #20 and recorded a Linear-ready project backfill in `docs/PROJECT_UPDATES.md` because Linear access was unavailable in the automation environment. Linked the project update record from README files so the runtime documentation refresh can be synced into Linear when credentials are available.
+
 ## 2026-07-06T16:06:02Z
 
 Ran scheduled engineering documentation automation. Refreshed runtime docs and README to match v2.2.0 shipped behavior for native file-backed `validate`/`infer`, fact-backed `atom` evaluation with `--facts`, scenario-driven dataset provenance, and current CLI bridge limits.
