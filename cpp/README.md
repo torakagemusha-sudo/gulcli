@@ -43,6 +43,11 @@ Current boundary: dataset streaming and file-backed `validate` / `infer` are
 implemented for supported composition tags when built from `cpp/`. Native `atom`
 evaluation supports `--facts <path>` on `infer`.
 
+Project updates for runtime and native CLI documentation work are tracked in
+`../docs/PROJECT_UPDATES.md`. The current Linear-ready record covers the PR #20
+documentation refresh for fact-backed infer, scenario dataset flags, and bridge
+limits.
+
 ### Dataset streaming (ML training)
 
 - **Stream to stdout (training format, JSON Lines):**

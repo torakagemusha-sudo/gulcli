@@ -2,6 +2,10 @@
 
 Byte-stable expected outputs for runtime_io validate/infer.
 
+Project-level post-merge updates are tracked in
+`../../docs/PROJECT_UPDATES.md`; this README stays limited to fixture
+regeneration commands.
+
 Regenerate after intentional output changes:
 
 ```bash

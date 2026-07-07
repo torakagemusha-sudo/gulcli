@@ -31,6 +31,7 @@ The current repository ships as:
   - [Config file](#config-file)
   - [Output format](#output-format)
   - [Python bridge](#python-bridge)
+- [Project tracking](#project-tracking)
 - [Module reference](#module-reference)
 - [Formal invariants](#formal-invariants)
 
@@ -569,6 +570,15 @@ ok = cli_validate(Path("policy.gul"))   # returns True/False
 result = cli_infer(Path("expr.gul"))
 print(result.returncode, result.stdout, result.stderr)
 ```
+
+---
+
+## Project tracking
+
+Post-merge project updates and Linear backfill records live in
+`docs/PROJECT_UPDATES.md`. The current record covers the PR #20 runtime
+documentation refresh and includes the fields needed to create or update the
+related Linear project when Linear access is available.
 
 ---
 
