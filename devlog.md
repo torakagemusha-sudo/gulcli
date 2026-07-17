@@ -75,3 +75,7 @@ Refreshed `docs/runtime_usage.md` to match current runtime behavior by replacing
 ## 2026-04-12T02:00:17Z
 
 Exported `runtime_io` helpers from the package root (`validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file`), bumped package version to `2.2.0-dev0` (aligned with `pyproject.toml`), updated `cli_bridge.validate` / `cli_infer` to try the native CLI first then fall back to the Python runtime, and documented the executable runtime commands in `README.md`.
+
+## 2026-07-17T14:51:00Z
+
+PR Approval Agent run on #24 (docs README landing page, already merged): no `APPROVAL_POLICY.md` or routing policies found; Cursor Bugbot check absent after poll; all CI checks passed; approved as low-risk documentation-only with no reviewers assigned.
