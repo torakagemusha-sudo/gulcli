@@ -26,6 +26,58 @@ recorded here for manual sync.
 
 | Field | Value |
 |-------|-------|
+| Related merge | PR #22, `docs: add PR21 Linear project follow-up` |
+| Merge commit | `94f91507544c5ee8068308ced40d1f97394e7ae6` |
+| Head commit | `f047aff6de56b5275fd282ddcbaa9b96c9c6bbdc` |
+| Merged at | `2026-07-07T08:44:57Z` |
+| Automation follow-up branch | `cursor/linear-project-updates-49a7` |
+| Linear action | Add this as the latest update to `GUL v2.2 runtime documentation alignment`; if the project does not exist, create it from the backfill section below first, then add the PR #20, PR #21, and PR #22 updates in order. |
+
+PR #22 added the PR #21 post-merge follow-up to the repo-local Linear backfill
+ledger and refreshed README pointers. The merge is documentation-only: it
+changed `README.md`, `cpp/README.md`, `tests/golden/README.md`, `devlog.md`,
+and `docs/PROJECT_UPDATES.md`, with no Python runtime, native C++, schema,
+fixture output, or packaging changes.
+
+Review result:
+
+- No runtime regression risk was found in the merge itself because the diff is
+  limited to documentation and project-tracking text.
+- The README entry points continue to point to the Linear-ready ledger.
+- Linear still was not reachable from this automation run, so the update is
+  recorded here rather than posted directly to Linear.
+
+### Latest Linear update body
+
+Use this as the latest project update if the Linear project already exists. If
+the project does not exist, create it from the project backfill above, then add
+the PR #20, PR #21, and PR #22 updates in order:
+
+```markdown
+PR #22 merged the PR #21 Linear project follow-up for GUL v2.2 runtime documentation alignment.
+
+What changed:
+- Added the PR #21 post-merge automation review and Linear update body to `docs/PROJECT_UPDATES.md`.
+- Refreshed the root README, C++ README, and golden fixture README pointers so they refer to the current Linear-ready ledger.
+- Recorded the PR #21 fallback in `devlog.md`.
+
+Review:
+- Documentation-only merge. No Python runtime, native C++, schema, fixture output, or packaging files changed.
+- README entry points continue to point to the same Linear-ready ledger.
+- No regressions were identified from the merge review.
+
+Verification from this follow-up:
+- `docs/PROJECT_UPDATES.md` machine-readable JSON payload parsed successfully after adding the PR #22 update.
+- All repository `README.md` files reference `docs/PROJECT_UPDATES.md` directly or intentionally point to a README that does.
+
+Follow-up:
+- Sync this update into Linear when Linear access is available to automation.
+```
+
+### Previous post-merge automation review
+
+| Field | Value |
+|-------|-------|
 | Related merge | PR #21, `docs: add Linear-ready project update` |
 | Merge commit | `0f21318ea025f26fc27e2711483a658a09775fd9` |
 | Head commit | `5918a9c542129c78d1b0fbf92273ebf89994e432` |
@@ -48,7 +100,7 @@ Review result:
 - Linear still was not reachable from this automation run, so the update is
   recorded here rather than posted directly to Linear.
 
-### Latest Linear update body
+### Previous Linear update body
 
 Use this as the latest project update if the Linear project already exists. If
 the project does not exist, create it from the project backfill above, then add
@@ -164,25 +216,43 @@ Follow-up:
     "fallback": "docs/PROJECT_UPDATES.md"
   },
   "latest_follow_up": {
-    "pr_number": 21,
-    "title": "docs: add Linear-ready project update",
-    "url": "https://github.com/torakagemusha-sudo/gulcli/pull/21",
-    "merge_commit": "0f21318ea025f26fc27e2711483a658a09775fd9",
-    "head_commit": "5918a9c542129c78d1b0fbf92273ebf89994e432",
-    "merged_at": "2026-07-07T08:36:20Z",
+    "pr_number": 22,
+    "title": "docs: add PR21 Linear project follow-up",
+    "url": "https://github.com/torakagemusha-sudo/gulcli/pull/22",
+    "merge_commit": "94f91507544c5ee8068308ced40d1f97394e7ae6",
+    "head_commit": "f047aff6de56b5275fd282ddcbaa9b96c9c6bbdc",
+    "merged_at": "2026-07-07T08:44:57Z",
     "linear_action": "add_project_update_or_create_project_then_backfill",
     "fallback_reason": "No Linear MCP server, Linear CLI, or LINEAR* credentials were available in automation.",
     "completed_work": [
-      "Added docs/PROJECT_UPDATES.md as the Linear-ready backfill ledger",
-      "Linked the project update ledger from every README.md",
-      "Recorded Linear access limits in devlog.md"
+      "Added the PR #21 post-merge automation review to docs/PROJECT_UPDATES.md",
+      "Refreshed README pointers for the current Linear-ready ledger",
+      "Recorded the PR #21 Linear fallback in devlog.md"
     ],
-    "verification_reported": [
-      "python3 -m pip install -e . && python3 -m unittest discover -s tests -v",
-      "README link coverage check",
-      "docs/PROJECT_UPDATES.md JSON payload parse check"
-    ]
+    "verification_reported": []
   },
+  "previous_follow_ups": [
+    {
+      "pr_number": 21,
+      "title": "docs: add Linear-ready project update",
+      "url": "https://github.com/torakagemusha-sudo/gulcli/pull/21",
+      "merge_commit": "0f21318ea025f26fc27e2711483a658a09775fd9",
+      "head_commit": "5918a9c542129c78d1b0fbf92273ebf89994e432",
+      "merged_at": "2026-07-07T08:36:20Z",
+      "linear_action": "add_project_update_or_create_project_then_backfill",
+      "fallback_reason": "No Linear MCP server, Linear CLI, or LINEAR* credentials were available in automation.",
+      "completed_work": [
+        "Added docs/PROJECT_UPDATES.md as the Linear-ready backfill ledger",
+        "Linked the project update ledger from every README.md",
+        "Recorded Linear access limits in devlog.md"
+      ],
+      "verification_reported": [
+        "python3 -m pip install -e . && python3 -m unittest discover -s tests -v",
+        "README link coverage check",
+        "docs/PROJECT_UPDATES.md JSON payload parse check"
+      ]
+    }
+  ],
   "completed_work": [
     "Updated runtime documentation for Python and native validate/infer",
     "Documented fact-backed atom inference",
