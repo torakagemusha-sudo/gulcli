@@ -1,614 +1,509 @@
-# GUL — Governed Uncertainty Logic v2.2
+# GUL — Governed Uncertainty Logic
 
-GUL is a formal logic system for policy evaluation under uncertainty. It extends classical binary allow/deny into a **4-valued decision algebra** — `permit`, `deny`, `defer`, `abstain` — with bounded confidence tracking, hierarchical jurisdiction scoping, and a full inference audit trail.
+**Deterministic policy reasoning for systems where “allow or deny” is not enough.**
 
-The current repository ships as:
+GUL is an executable policy engine and formal decision framework for AI systems, authorization layers, workflow engines, and governed automation.
 
-- **Python package** — pure-Python implementation of the complete GUL type system, inference engine, policy evaluation, and DSL compiler
-- **C++ CLI** (`gul.exe`) — high-performance dataset streamer that generates ML training data sampled from the GUL formal system
-- **Python bridge** (`cli_bridge.py`) — subprocess wrapper around the CLI for use within Python workflows
+Instead of forcing every evaluation into a binary answer, GUL returns one of four explicit outcomes:
 
----
+- `permit` — the action is authorized;
+- `deny` — the action is blocked;
+- `defer` — the available evidence is insufficient and the decision must escalate;
+- `abstain` — the policy is outside its jurisdiction and has no authority to decide.
 
-## Table of Contents
+Every decision can carry bounded confidence, evidence, jurisdiction context, and an inference trace. This preserves distinctions that binary policy systems often push into application-specific error handling.
 
-- [Core Concepts](#core-concepts)
-  - [4-valued decisions](#4-valued-decisions)
-  - [Confidence lattice](#confidence-lattice)
-  - [Jurisdiction](#jurisdiction)
-- [Python Package](#python-package)
-  - [Installation](#installation)
-  - [Quick start](#quick-start)
-  - [Executable Python runtime](#executable-python-runtime)
-  - [Inference engine](#inference-engine)
-  - [Policy evaluation](#policy-evaluation)
-  - [Policy expression DSL](#policy-expression-dsl)
-  - [Jurisdiction system](#jurisdiction-system)
-- [C++ CLI](#c-cli)
-  - [Build](#build)
-  - [Dataset streaming](#dataset-streaming)
-  - [CLI options](#cli-options)
-  - [Config file](#config-file)
-  - [Output format](#output-format)
-  - [Python bridge](#python-bridge)
-- [Project tracking](#project-tracking)
-- [Module reference](#module-reference)
-- [Formal invariants](#formal-invariants)
+GUL v2.2.0 currently provides:
+
+| Surface | Purpose |
+|---|---|
+| **Python package** | Reference type system, decision algebra, confidence operations, jurisdiction model, inference engine, policy API, and expression DSL |
+| **Portable Python CLI** | Validate and evaluate canonical GUL JSON specifications with optional fact environments and traces |
+| **Native C++17 CLI** | File-backed validation and inference plus high-throughput JSONL dataset streaming |
+| **Python/native bridge** | Native executable discovery, dataset streaming helpers, and Python fallback for validation/inference when the native process cannot launch |
+| **Schemas and golden fixtures** | Versioned validation/inference output contracts and cross-runtime regression evidence |
+
+The core Python package requires Python 3.10 or later and has no mandatory runtime dependencies.
 
 ---
 
-## Core Concepts
+## Why GUL exists
 
-### 4-valued decisions
+Many consequential systems cannot honestly answer every question with only `true` or `false`.
 
-GUL replaces the binary allow/deny model with four distinct outcomes:
+A request may be:
 
-| Decision | Wire value | Meaning |
-|----------|-----------|---------|
-| `PERMIT` | `"permit"` | Action is authorized |
-| `DENY` | `"deny"` | Action is blocked |
-| `DEFER` | `"defer"` | Confidence is too low; escalate to a higher-authority policy |
-| `ABSTAIN` | `"abstain"` | This policy has no opinion; outside its jurisdiction scope |
+- valid but insufficiently supported;
+- outside the evaluating policy’s authority;
+- supported by conflicting evidence;
+- locally authorized but globally constrained;
+- conditionally permitted at one confidence threshold and deferred at another.
 
-`PERMIT` and `DENY` are **terminal** — they end evaluation. `DEFER` propagates uncertainty upward. `ABSTAIN` is the identity element in combination: `ABSTAIN + x → x`.
+Collapsing those states into a binary result destroys information precisely where governance needs it most. GUL makes uncertainty, scope, evidence, and escalation part of the decision model itself.
 
-Combination priority: **DENY > PERMIT > DEFER > ABSTAIN**
+### Design emphasis
 
-```python
-from gulcli import Decision, DecisionCombiner
+| Concern | GUL | Typical binary policy logic |
+|---|---|---|
+| Decision state | `permit`, `deny`, `defer`, `abstain` | Usually allow/deny |
+| Uncertainty | First-class bounded confidence | Commonly handled outside the policy result |
+| Out-of-scope evaluation | Explicit `abstain` | Often conflated with denial or missing rules |
+| Escalation | Explicit `defer` | Usually application-defined |
+| Scope | Hierarchical jurisdiction model | Commonly resource- or role-specific only |
+| Evidence | Carried with the evaluated decision | Commonly logged separately |
+| Composition | Defined logical and confidence operators | Frequently implementation-specific |
+| Auditability | Structured inference trace and versioned output envelopes | Integration-dependent |
+| ML support | Native governed-trace dataset generation | Not normally a core policy-engine concern |
 
-DecisionCombiner.combine(Decision.PERMIT, Decision.DENY)    # → DENY
-DecisionCombiner.combine(Decision.PERMIT, Decision.PERMIT)  # → PERMIT
-DecisionCombiner.combine(Decision.PERMIT, Decision.DEFER)   # → DEFER
-DecisionCombiner.combine(Decision.ABSTAIN, Decision.PERMIT) # → PERMIT
+GUL is not intended to replace every authorization language. It is most useful when a system must preserve uncertainty, jurisdiction, provenance, or escalation semantics rather than reduce them prematurely.
 
-DecisionCombiner.invert(Decision.PERMIT)  # → DENY
-DecisionCombiner.invert(Decision.DEFER)   # → DEFER (unchanged)
+---
 
-# Override semantics: ABSTAIN means "no override, keep base"
-DecisionCombiner.override(Decision.DEFER, Decision.PERMIT)  # → PERMIT
-DecisionCombiner.override(Decision.PERMIT, Decision.ABSTAIN) # → PERMIT
+## 60-second start
+
+Clone the repository and install the package in editable mode:
+
+```bash
+git clone https://github.com/torakagemusha-sudo/gulcli.git
+cd gulcli
+python -m pip install -e .
 ```
 
-### Confidence lattice
+Validate an example policy specification:
 
-Confidence is a bounded value in **[0, 1]** representing certainty in a decision. It is an immutable value type; construction outside [0, 1] raises `ValueError`.
+```bash
+python -m gulcli validate examples/specs/basic_infer.gul.json --format json
+```
 
-Four algebraic combination operations cover all common evidence-composition patterns:
+Run inference:
 
-| Operation | Formula | Semantics |
-|-----------|---------|-----------|
-| **Union** | `max(c1, c2)` | OR — either source is sufficient |
-| **Intersection** | `min(c1, c2)` | AND — weakest-link; both required |
-| **Sequential** | `c1 × c2` | Dependent chain; uncertainty compounds |
-| **Parallel** | `c1 + c2 − c1·c2` | Independent sources reinforce each other |
+```bash
+python -m gulcli infer examples/specs/basic_infer.gul.json --format json
+```
+
+The example combines two permitted decisions with confidence values `0.92` and `0.81`, then applies a `0.70` threshold. The stable result is:
+
+```json
+{
+  "confidence": 0.81,
+  "decision": "permit",
+  "evidence": [
+    "role check passed",
+    "context verified"
+  ],
+  "input_hash": "1033291147243006058ccecc99f19630b18b8a9744a0d465baecb906ba20c363",
+  "jurisdiction": null,
+  "schema": "gul.inference.result/1",
+  "trace": [],
+  "version": "2.2.0"
+}
+```
+
+The result is not just a boolean. It records the decision, confidence, evidence, normalized-input identity, schema version, and optional trace. Add `--trace` to emit the `AND` and `THRESHOLD` inference steps.
+
+---
+
+## Python API
+
+```python
+from gulcli import (
+    Confidence,
+    Decision,
+    EvaluatedDecision,
+    GULInferenceEngine,
+    GULGovernancePolicy,
+)
+
+engine = GULInferenceEngine()
+
+role_check = EvaluatedDecision(
+    Decision.PERMIT,
+    Confidence(0.92),
+    evidence=["role check passed"],
+)
+context_check = EvaluatedDecision(
+    Decision.PERMIT,
+    Confidence(0.81),
+    evidence=["context verified"],
+)
+
+result = engine.evaluate_and(role_check, context_check)
+
+print(result.decision)          # Decision.PERMIT
+print(result.confidence.value)  # 0.81
+print(result.evidence)          # combined evidence
+print(engine.get_trace_summary())
+```
+
+Threshold policy evaluation is also available directly:
+
+```python
+policy = GULGovernancePolicy(
+    max_risk=0.40,
+    min_coherence=0.50,
+    min_confidence=0.65,
+    policy_name="deployment_gate",
+)
+
+decision = policy.evaluate(
+    risk_score=0.25,
+    coherence=0.90,
+    confidence=Confidence(0.82),
+    context={"environment": "production"},
+)
+
+print(decision.decision)
+print(decision.reason)
+print(decision.evidence)
+print(decision.to_dict())
+```
+
+---
+
+## Core model
+
+### Four-valued decisions
+
+| Decision | Meaning | Typical next action |
+|---|---|---|
+| `PERMIT` | The action is authorized | Continue |
+| `DENY` | The action is prohibited | Stop |
+| `DEFER` | Evidence or confidence is insufficient | Escalate, gather evidence, or invoke a higher-authority policy |
+| `ABSTAIN` | The policy has no jurisdiction over the request | Continue evaluation elsewhere |
+
+Key semantics:
+
+- `DENY` dominates conjunction.
+- `PERMIT` dominates disjunction.
+- `DEFER` preserves unresolved uncertainty.
+- `ABSTAIN` acts as “no opinion” rather than a negative judgment.
+- inversion swaps `permit` and `deny` while preserving `defer` and `abstain`.
+
+### Confidence algebra
+
+Confidence is an immutable value in `[0, 1]`.
+
+| Operation | Formula | Interpretation |
+|---|---|---|
+| Union | `max(c1, c2)` | Either source is sufficient |
+| Intersection | `min(c1, c2)` | Both are required; weakest evidence dominates |
+| Sequential | `c1 × c2` | Dependent uncertainty compounds |
+| Parallel | `c1 + c2 − c1·c2` | Independent evidence reinforces |
 
 ```python
 from gulcli import Confidence, ConfidenceOps
 
-c1 = Confidence(0.9)
-c2 = Confidence(0.7)
+c1 = Confidence(0.90)
+c2 = Confidence(0.70)
 
-ConfidenceOps.combine_union(c1, c2)        # Confidence(0.9000)
-ConfidenceOps.combine_intersection(c1, c2) # Confidence(0.7000)
-ConfidenceOps.combine_sequential(c1, c2)   # Confidence(0.6300)
-ConfidenceOps.combine_parallel(c1, c2)     # Confidence(0.9700)
-
-# Aggregation over a list
-ConfidenceOps.aggregate([c1, c2], method="min")      # Confidence(0.7000)
-ConfidenceOps.aggregate([c1, c2], method="product")  # Confidence(0.6300)
-ConfidenceOps.aggregate([c1, c2], method="parallel") # Confidence(0.9700)
-ConfidenceOps.aggregate([c1, c2], method="average")  # Confidence(0.8000)
-
-# Weighted average
-ConfidenceOps.weighted_average([c1, c2], weights=[3.0, 1.0])  # Confidence(0.8500)
-
-Confidence.zero()  # 0.0 — bottom of lattice
-Confidence.one()   # 1.0 — top of lattice
-Confidence.from_probability(1.3)  # clamps → Confidence(1.0)
-Confidence(0.8).complement()      # Confidence(0.2)
+ConfidenceOps.combine_union(c1, c2)         # Confidence(0.9000)
+ConfidenceOps.combine_intersection(c1, c2)  # Confidence(0.7000)
+ConfidenceOps.combine_sequential(c1, c2)    # Confidence(0.6300)
+ConfidenceOps.combine_parallel(c1, c2)      # Confidence(0.9700)
 ```
 
 ### Jurisdiction
 
-Jurisdictions form a **partial order** under the sub-jurisdiction relation (⊆ᵥ). A policy declares its jurisdiction; any request that falls outside produces `ABSTAIN` rather than `DENY` — cleanly separating "out of scope" from "actively blocked".
+Jurisdictions form a partial order. A policy may evaluate only requests inside its declared scope.
 
-Five levels from broadest to narrowest:
-
+```text
+GLOBAL
+└── REGIONAL
+    └── ORGANIZATIONAL
+        └── DEPARTMENTAL
+            └── PERSONAL
 ```
-GLOBAL > REGIONAL > ORGANIZATIONAL > DEPARTMENTAL > PERSONAL
-```
 
-Five jurisdiction types for constraint composition:
+A request outside scope returns `abstain`, not `deny`. This separates lack of authority from an authoritative prohibition.
 
-| JType | Meaning |
-|-------|---------|
-| `UNRESTRICTED` | No jurisdiction constraint |
-| `LOCAL` | Bound to a specific jurisdiction |
-| `UNION` | Any listed jurisdiction is sufficient |
-| `INTERSECTION` | All listed jurisdictions must agree |
-| `DELEGATION` | Authority delegated from another jurisdiction |
+Supported jurisdiction constraint forms include:
+
+- unrestricted;
+- local;
+- union;
+- intersection;
+- delegation.
 
 ---
 
-## Python Package
+## Runtime architecture
 
-### Installation
-
-```bash
-pip install -e .
+```text
+GUL JSON specification or Python DSL
+                +
+        optional fact environment
+                │
+                ▼
+      validation and normalization
+      - supported-tag validation
+      - deterministic normalized form
+      - input hash
+                │
+                ▼
+          inference engine
+      - decision composition
+      - confidence propagation
+      - jurisdiction checks
+      - threshold and override rules
+      - evidence accumulation
+                │
+                ▼
+       versioned result envelope
+      decision + confidence + evidence
+      jurisdiction + trace + input hash
 ```
 
-Requires Python 3.10+. The package has **no mandatory runtime dependencies**.
+The native dataset path is separate but uses the same decision vocabulary:
 
-### Quick start
-
-```python
-from gulcli import (
-    Confidence, Decision, EvaluatedDecision,
-    GULInferenceEngine, GULGovernancePolicy,
-)
-
-# --- Direct inference ---
-engine = GULInferenceEngine()
-
-d1 = EvaluatedDecision(Decision.PERMIT, Confidence(0.9), evidence=["role check passed"])
-d2 = EvaluatedDecision(Decision.PERMIT, Confidence(0.7), evidence=["context verified"])
-
-result = engine.evaluate_and(d1, d2)
-print(result.decision)          # Decision.PERMIT
-print(result.confidence.value)  # 0.7  (intersection = min)
-print(result.evidence)          # ['role check passed', 'context verified']
-
-# --- Policy evaluation ---
-policy = GULGovernancePolicy(
-    max_risk=0.5,
-    min_coherence=0.3,
-    min_confidence=0.6,
-    policy_name="my_policy",
-)
-
-decision = policy.evaluate(risk_score=0.2, coherence=0.9)
-print(decision.ok)              # True  (PERMIT with conf >= 0.5)
-print(decision.decision)        # Decision.PERMIT
-print(decision.evidence)        # ['all thresholds satisfied']
-print(decision.to_dict())       # full serializable record
+```text
+scenario/configuration/spec
+            │
+            ▼
+      native C++ generator
+            │
+            ▼
+ JSON Lines governed trace records
+            │
+   stdout or TCP transport
+            ▼
+ training, evaluation, diagnostics
 ```
 
-### Executable Python runtime
-
-JSON spec files under `examples/specs/` validate and run inference without the C++ binary. Use the package entrypoint:
-
-```bash
-python3 -m gulcli validate examples/specs/basic_infer.gul.json --format json
-python3 -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
-python3 -m gulcli infer examples/specs/atom_role.gul.json \
-  --facts examples/facts/basic_facts.json --format json --trace
-```
-
-The same logic is available from Python via `validate_file`, `infer_file`, `validate_spec_data`, and `evaluate_expr_data` (see the module reference). When the native `gul` CLI is installed, `cli_validate` / `cli_infer` try it first and fall back to this runtime if the executable cannot be started.
-
-Fact-backed `atom` predicates use `examples/facts/basic_facts.json` as the
-reference shape. Supported fact keys are `roles`, `attributes`, `belongs_to`,
-`in_context`, `custom`, and optional `now` for time predicates.
-
-```python
-from pathlib import Path
-from gulcli.runtime_io import infer_file, load_facts
-
-facts = load_facts(Path("examples/facts/basic_facts.json"))
-result = infer_file(Path("examples/specs/atom_role.gul.json"), facts=facts)
-```
-
-For source-verified command boundaries, bridge fallback behavior, and dataset
-generation caveats, see `docs/runtime_usage.md`.
-
-### Inference engine
-
-`GULInferenceEngine` implements the package's GUL inference rules. Every call appends an `InferenceTrace` entry; the full trace is available via `get_trace_summary()`.
-
-```python
-engine = GULInferenceEngine()
-
-# Binary combiners
-engine.evaluate_and(d1, d2)       # DENY if either denies; PERMIT if both permit; else DEFER
-engine.evaluate_or(d1, d2)        # PERMIT if either permits; DENY if both deny; else DEFER
-engine.evaluate_sequential(d1, d2) # Dependent chain; confidence = c1 × c2
-engine.evaluate_parallel(d1, d2)   # Independent sources; confidence = c1 + c2 − c1·c2
-
-# Unary
-engine.evaluate_not(d)             # PERMIT ↔ DENY; DEFER/ABSTAIN unchanged; confidence preserved
-
-# Branching
-engine.evaluate_conditional(condition, then_branch, else_branch)
-# If condition=PERMIT → then with sequential confidence
-# If condition=DENY   → else with sequential confidence
-# If condition=DEFER  → DEFER (condition uncertain)
-
-# Threshold gate
-engine.evaluate_threshold(d, threshold=0.7)
-# Returns d unchanged if d.confidence >= threshold; else returns DEFER
-
-# Jurisdiction scope check
-engine.evaluate_jurisdiction_check(d, request_jurisdiction, policy_jurisdiction)
-# Returns d if request ⊆ᵥ policy; else ABSTAIN with confidence=1.0
-
-# Fold over a list
-engine.evaluate_all([d1, d2, d3], combiner="and")       # left-fold with AND
-engine.evaluate_all([d1, d2, d3], combiner="or")        # left-fold with OR
-engine.evaluate_all([d1, d2, d3], combiner="sequential")
-engine.evaluate_all([d1, d2, d3], combiner="parallel")
-
-# Audit trace
-engine.get_trace_summary()  # list of dicts: rule, inputs, output, metadata
-engine.clear_trace()
-engine.enable_trace(False)  # disable tracing for hot paths
-```
-
-### Policy evaluation
-
-`GULGovernancePolicy` applies threshold checks in order — jurisdiction scope, risk ceiling, coherence floor, confidence floor — and returns a `GULGovernanceDecision` with a full audit record.
-
-```python
-from gulcli import GULGovernancePolicy, Confidence, EvaluatedDecision, Decision
-
-policy = GULGovernancePolicy(
-    max_risk=0.4,        # DENY if risk_score > 0.4
-    min_coherence=0.5,   # DENY if coherence < 0.5
-    min_confidence=0.65, # DEFER if confidence < 0.65
-    policy_name="risk_gate",
-)
-
-# From raw metrics
-decision = policy.evaluate(risk_score=0.3, coherence=0.8)
-decision = policy.evaluate(risk_score=0.3, coherence=0.8, confidence=Confidence(0.9))
-decision = policy.evaluate(risk_score=0.3, coherence=0.8, context={"user": "alice"})
-
-# From a stats dict
-decision = policy.evaluate_stats({"risk": 0.3, "coherence": 0.8, "confidence": 0.9})
-
-# From pre-evaluated sub-decisions (uses inference engine internally)
-sub_decisions = [
-    EvaluatedDecision(Decision.PERMIT, Confidence(0.9)),
-    EvaluatedDecision(Decision.PERMIT, Confidence(0.8)),
-]
-decision = policy.evaluate_with_inference(sub_decisions, combiner="and")
-
-# Decision record
-decision.decision        # Decision.PERMIT / DENY / DEFER / ABSTAIN
-decision.confidence      # Confidence(...)
-decision.ok              # True iff PERMIT and confidence >= 0.5 (legacy compat)
-decision.reason          # human-readable string
-decision.evidence        # list of strings
-decision.risk_score      # float
-decision.coherence_score # float
-decision.timestamp       # ISO timestamp
-decision.to_dict()       # fully serializable
-
-# History and audit
-policy.get_decision_history()     # list of all decisions
-policy.get_decision_history(n=10) # last n decisions
-policy.get_audit_summary()        # counts by decision type + averages
-policy.reset_history()
-```
-
-**Evaluation order:**
-
-1. **Jurisdiction check** — if `context["jurisdiction"]` is outside `policy.jurisdiction`, return `ABSTAIN`
-2. **Risk ceiling** — if `risk_score > max_risk`, return `DENY`
-3. **Coherence floor** — if `coherence < min_coherence`, return `DENY`
-4. **Confidence floor** — if `confidence < min_confidence`, return `DEFER`
-5. All checks pass → return `PERMIT`
-
-Decision history and audit summaries are available through `GULGovernancePolicy.get_decision_history()` and `get_audit_summary()`.
-
-### Policy expression DSL
-
-The DSL provides `Predicate` and `PolicyExpr` types. All expressions are immutable and JSON-serializable via `to_dict()` / `from_dict()`.
-
-#### Entities
-
-```python
-from gulcli import Entity
-
-user    = Entity("agent",    "user:alice")
-doc     = Entity("resource", "doc:report-q4")
-ctx     = Entity("context",  "workspace:prod")
-policy  = Entity("policy",   "gdpr-v2")
-```
-
-Kinds: `"agent"`, `"resource"`, `"context"`, `"policy"`.
-
-#### Predicates
-
-```python
-from gulcli import belongs_to, has_role, has_attribute, in_context, time_before, time_after, custom
-
-belongs_to(user, doc)                        # user owns/belongs to doc
-has_role(user, "editor")                     # user has role "editor"
-has_attribute(doc, "classification", "confidential")  # doc.classification == "confidential"
-in_context(user, ctx)                        # user is operating in ctx
-time_before(1_700_000_000)                   # current time < unix timestamp
-time_after(1_600_000_000)                    # current time > unix timestamp
-custom("my_check", user, doc)               # extensible custom predicate
-```
-
-#### Policy expressions
-
-```python
-from gulcli import atom, and_, or_, not_, implies, with_confidence, always, eventually, until
-
-# Propositional
-expr = and_(
-    atom(has_role(user, "editor")),
-    atom(has_attribute(doc, "status", "draft")),
-)
-
-expr = or_(
-    atom(has_role(user, "admin")),
-    atom(has_role(user, "owner")),
-)
-
-expr = not_(atom(has_attribute(doc, "classification", "top-secret")))
-
-expr = implies(
-    atom(has_role(user, "contractor")),
-    atom(in_context(user, ctx)),
-)
-
-# Confidence annotation
-expr = with_confidence(atom(has_role(user, "reviewer")), 0.85)
-
-# Temporal (structural; evaluated by inference engine)
-expr = always(atom(has_attribute(doc, "encrypted", "true")))
-expr = eventually(atom(has_role(user, "approver")))
-expr = until(atom(has_role(user, "pending")), atom(has_role(user, "active")))
-
-# Serialization round-trip
-d = expr.to_dict()
-expr2 = PolicyExpr.from_dict(d)
-```
-
-### Jurisdiction system
-
-```python
-from gulcli import (
-    JurisdictionId, JurisdictionLevel, Jurisdiction, JType,
-    JurisdictionConstraint, create_jurisdiction_hierarchy,
-)
-
-# Build a hierarchy (names listed root-first)
-jurisdictions = create_jurisdiction_hierarchy(
-    ["global", "eu", "eu.ireland"],
-    authority="platform-team",
-)
-global_j, eu_j, ireland_j = jurisdictions
-
-# Sub-jurisdiction checks
-ireland_j.id.is_sub_jurisdiction(global_j.id)   # True
-ireland_j.id.is_sub_jurisdiction(eu_j.id)       # True
-global_j.id.is_sub_jurisdiction(ireland_j.id)   # False
-
-ireland_j.id.fully_qualified_name()  # "global.eu.eu.ireland"
-ireland_j.id.depth()                 # 2
-ireland_j.id.root()                  # JurisdictionId(global)
-
-# Validity window
-from datetime import datetime
-j = Jurisdiction(
-    id=JurisdictionId("temp"),
-    level=JurisdictionLevel.LOCAL,
-    authority="ops",
-    valid_since=datetime(2024, 1, 1),
-    valid_until=datetime(2026, 12, 31),
-)
-j.is_valid()  # True/False based on current time
-
-# Delegation
-j.can_delegate_to("sub-team")  # checks j.delegates list
-
-# Constraint types
-JurisdictionConstraint.unrestricted()              # always matches
-JurisdictionConstraint.local(ireland_j.id)         # must be ⊆ ireland
-JurisdictionConstraint.union(eu_j.id, ireland_j.id) # either suffices
-JurisdictionConstraint.intersection(eu_j.id, ireland_j.id)  # must be in both
-```
+Standard output can be redirected to a file for offline datasets.
 
 ---
 
-## C++ CLI
+## Executable policy specifications
 
-The C++ binary provides native GUL data structures and streams ML training
-samples as JSON Lines. It can write to stdout or push directly to a TCP socket.
+Runtime files are JSON documents containing either an expression node or an envelope with an `expr` field.
 
-Current boundary: native dataset streaming and file-backed `validate` / `infer`
-are implemented when built from `cpp/`. Native `infer` supports atom evaluation
-with `--facts <path>`.
+```json
+{
+  "expr": {
+    "tag": "threshold",
+    "threshold": 0.7,
+    "p": {
+      "tag": "and_",
+      "p1": {
+        "tag": "decision",
+        "decision": "permit",
+        "confidence": 0.92,
+        "evidence": ["role check passed"]
+      },
+      "p2": {
+        "tag": "decision",
+        "decision": "permit",
+        "confidence": 0.81,
+        "evidence": ["context verified"]
+      }
+    }
+  }
+}
+```
+
+The current runtime supports:
+
+- `decision`
+- `atom`
+- `and_`, `or_`, `not_`, `implies`
+- `with_confidence`, `threshold`
+- `jurisdiction`, `override`
+- `sequential`, `parallel`
+- `always`, `eventually`, `until`
+
+`atom` predicates can evaluate roles, attributes, membership, context, time, and custom facts supplied through a fact environment.
+
+```bash
+python -m gulcli infer examples/specs/atom_role.gul.json \
+  --facts examples/facts/basic_facts.json \
+  --format json \
+  --trace
+```
+
+Missing fact bindings defer rather than fabricate certainty. Explicit mismatches deny.
+
+---
+
+## Native C++ CLI
+
+The C++17 executable provides native validation, inference, and high-throughput dataset streaming.
 
 ### Build
 
 ```bash
 cd cpp
-mkdir build && cd build
+mkdir build
+cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 ```
 
-Output: `build/Release/gul.exe` (Windows) or `build/gul` (Unix).
+Expected output:
 
-**On Linux/macOS** (no native build): run through Wine:
+- Windows: `build/Release/gul.exe`
+- Unix-like systems: `build/gul`
 
-```bash
-WINEDEBUG=-all DISPLAY= wine ./gul.exe --help
-```
-
-### Dataset streaming
+### Validate and infer
 
 ```bash
-# Basic: stream to stdout with an explicit limit
-gul -oneshot -T -n 64
-gul -T -n 1000
-gul -config sample.conf -T
-
-# Randomized, custom block size, fixed seed
-gul -T -n 5000 -random -block 128 -seed 42
-
-# Deep GUL streaming to stdout
-gul -deepgul -T -n 500
-
-# Stream to a TCP consumer (start listener first)
-nc -l 1234                              # listener (Linux/macOS)
-gul -deepgul -L 127.0.0.1/1234 -n 500
-gul -oneshot -T -L 127.0.0.1/1234 -n 500
-
-# Native validate/infer
 gul validate examples/specs/basic_infer.gul.json --format json
 gul infer examples/specs/basic_infer.gul.json --format json --trace
-gul infer examples/specs/atom_role.gul.json --facts examples/facts/basic_facts.json --format json
+gul infer examples/specs/atom_role.gul.json \
+  --facts examples/facts/basic_facts.json \
+  --format json
+```
 
-# Scenario-driven dataset generation
+### Generate governed training data
+
+```bash
+# Bounded JSONL stream to stdout
+gul -oneshot -T -n 1000
+
+# Reproducible randomized stream
+gul -T -n 5000 -random -block 128 -seed 42
+
+# Deep GUL mode
+gul -deepgul -T -n 500
+
+# Scenario-driven generation
 gul -oneshot -T -n 100 --scenario balanced --seed 42
-gul -oneshot -T -n 50 --scenario adversarial --spec examples/specs/basic_infer.gul.json --stats
+gul -oneshot -T -n 50 --scenario adversarial \
+  --spec examples/specs/basic_infer.gul.json \
+  --stats
+
+# TCP streaming
+gul -deepgul -L 127.0.0.1/1234 -n 500
 ```
 
-### CLI options
+Dataset streaming is unbounded unless `-n <N>` or a configuration `max_samples` value is supplied.
 
-| Option | Description |
-|--------|-------------|
-| `-T` | Stream dataset to stdout in JSON Lines format |
-| `-oneshot` | Select single-command stdout streaming; pair with `-n` or `max_samples` to exit |
-| `-deepgul` | Enable deep GUL streaming mode |
-| `-n <N>`, `--limit <N>` | Limit output to N samples |
-| `-random`, `--random` | Randomize sample order |
-| `-block <N>`, `--block <N>` | Block size for streaming (default: 64) |
-| `-seed <N>`, `--seed <N>` | RNG seed; 0 means random |
-| `--scenario <mode>` | Scenario family selection: `balanced` or `adversarial` |
-| `--spec <path>` | Link samples to a `*.gul.json` spec and emit `source_spec_id` provenance |
-| `--stats` | Emit scenario and decision distribution JSON to stderr |
-| `-config <path>` | Load config file (key=value or key: value format) |
-| `-L <host/port>` | Stream to TCP endpoint, e.g. `127.0.0.1/1234` or `127.0.0.1:1234` |
-| `validate [file]` | Validate a GUL spec file (`--format json` supported) |
-| `infer [file]` | Run inference (`--format json`, `--trace`, `--facts` supported) |
-| `-h`, `--help` | Print usage |
-| `-v`, `--version` | Print version |
-
-### Config file
-
-Plain text, one key per line. Both `=` and `:` separators are accepted.
-
-```ini
-seed = 42
-block_size = 64
-max_samples = 10000
-random_order = true
-```
-
-When neither `-n <N>` nor a config `max_samples` value is provided, native
-dataset streaming is unbounded.
-
-### Output format
-
-Each line of output is a self-contained JSON object (JSON Lines / NDJSON):
-
-```json
-{
-  "entity":             { "kind": "agent", "id": "user:42" },
-  "predicate":          { "tag": "has_role", "args": ["editor"] },
-  "context_confidence": 0.91,
-  "decision":           "permit",
-  "confidence":         0.83,
-  "evidence":           ["role check passed", "context verified"]
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `entity` | object | `kind` ∈ `{agent, resource, context, policy}`; `id` string |
-| `predicate` | object | `tag` string; `args` array |
-| `context_confidence` | float [0,1] | Confidence of the evaluation context |
-| `decision` | string | `permit` \| `deny` \| `defer` \| `abstain` |
-| `confidence` | float [0,1] | Confidence in the decision |
-| `evidence` | array of strings | Reasoning chain |
-| `extensions` | object, optional | Dataset provenance: `schema`, `scenario`, `source_spec_id`, `seed`, `generator_version`, `sample_index` |
-
-Treat each line as an independent JSON document. Confidence values are guaranteed to be in [0, 1].
-
-### Python bridge
-
-`cli_bridge.py` wraps the binary for use from Python. The executable is resolved in order: `gul_exe_path` argument → `GUL_EXE_PATH` env var → package-local `cpp/build/` artifacts → `gul` on PATH.
-The dataset helpers expose the common streaming flags, but they do not expose
-native `--scenario`, `--spec`, or `--stats` today.
-
-```python
-from gulcli import generate_dataset, stream_dataset, cli_validate, cli_infer, find_gul_exe
-from pathlib import Path
-import json
-
-# Resolve the binary path
-exe = find_gul_exe()                          # auto-discover
-exe = find_gul_exe("/custom/path/gul.exe")    # explicit override
-
-# Write N samples to a JSONL file (blocks until complete)
-out = generate_dataset(
-    n=10_000,
-    output_path=Path("data/train.jsonl"),
-    config_path=Path("cpp/sample.conf"),
-    random_order=True,
-    block_size=128,
-    seed=42,
-)
-
-# Lazy streaming generator (yields one decoded line at a time)
-for line in stream_dataset(n=500, random_order=True):
-    record = json.loads(line)
-    print(record["decision"], record["confidence"])
-
-# Validate a spec file
-ok = cli_validate(Path("policy.gul"))   # returns True/False
-
-# Run inference and inspect result
-result = cli_infer(Path("expr.gul"))
-print(result.returncode, result.stdout, result.stderr)
-```
+Each output line is an independent JSON document containing a decision, confidence, evidence, entity/predicate context, and optional provenance extensions.
 
 ---
 
-## Project tracking
+## Capability boundaries
 
-Post-merge project updates and Linear backfill records live in
-`docs/PROJECT_UPDATES.md`. The current record covers the PR #20 runtime
-documentation refresh and the PR #21 project-tracking follow-up, with the fields
-needed to create or update the related Linear project when Linear access is
-available.
+The repository intentionally distinguishes implemented behavior from architectural direction.
 
----
+| Capability | Current state |
+|---|---|
+| Python decision algebra, confidence operations, jurisdiction model, inference, and policy API | Implemented |
+| Portable Python JSON validation and inference | Implemented |
+| Fact-backed `atom` evaluation | Implemented |
+| Versioned validation and inference result schemas | Implemented |
+| Native C++ validation and inference | Implemented when the binary is built |
+| Native JSONL dataset streaming | Implemented when the binary is built |
+| Python bridge fallback for `validate` and `infer` | Implemented when the native executable cannot launch |
+| Python fallback for native dataset generation | Not currently implemented |
+| Temporal operators | Structural/approximate semantics in the current runtime |
+| Full external proof-assistant equivalence | Not claimed by this repository |
+| TFIR and Helmsdeep runtime integration | Ecosystem direction; not a dependency of the standalone package |
 
-## Module reference
-
-| Module | Exports | Description |
-|--------|---------|-------------|
-| `confidence.py` | `Confidence`, `ConfidenceOps` | Bounded [0,1] confidence value type; union, intersection, sequential, parallel, weighted average, and aggregate operations |
-| `decision.py` | `Decision`, `EvaluatedDecision`, `DecisionCombiner` | 4-valued decision enum; decision + confidence + evidence record; combine, override, invert combiners |
-| `jurisdiction.py` | `JurisdictionLevel`, `JurisdictionId`, `Jurisdiction`, `JType`, `JurisdictionConstraint` | Hierarchical authority scopes; sub-jurisdiction partial order; validity windows; delegation; constraint types |
-| `inference.py` | `GULInferenceEngine`, `InferenceTrace` | All formal inference rules with full audit trace; AND, OR, NOT, sequential, parallel, conditional, threshold, jurisdiction check |
-| `policy.py` | `GULGovernanceDecision`, `GULGovernancePolicy` | Threshold-based policy evaluation; decision history; audit summary |
-| `expr.py` | `Entity`, `Predicate`, `PolicyExpr`, DSL constructors | JSON-serializable AST for policy expressions |
-| `facts.py` | `FactEnvironment` | Runtime bindings for atom predicate evaluation |
-| `runtime_io.py` | `validate_spec_data`, `evaluate_expr_data`, `validate_file`, `infer_file`, `load_facts` | JSON spec validation and inference; powers `python -m gulcli` |
-| `cli_bridge.py` | `find_gul_exe`, `generate_dataset`, `stream_dataset`, `cli_validate`, `cli_infer` | Subprocess wrapper around `gul`; validate/infer fall back to `runtime_io` when the CLI is unavailable |
+For exact operational constraints, use the [runtime usage guide](docs/runtime_usage.md).
 
 ---
 
-## Formal invariants
+## ToraFirma ecosystem position
 
-These invariants hold across the entire system and are enforced at construction or combination time:
+GUL is independently usable. Within the broader ToraFirma architecture, its intended role is policy evaluation rather than ownership of the canonical object model.
 
-- **Confidence bounds**: `Confidence(v)` raises `ValueError` if `v ∉ [0, 1]`. All combination operations preserve this bound.
-- **DENY dominance**: In AND combination, `DENY` dominates any other decision.
-- **PERMIT dominance**: In OR combination, `PERMIT` dominates any other decision.
-- **ABSTAIN identity**: `ABSTAIN` combined with any decision `x` yields `x`.
-- **Jurisdiction scope → ABSTAIN**: A request outside a policy's jurisdiction always produces `ABSTAIN`, never `DENY`.
-- **DEFER on low confidence**: `evaluate_threshold` converts any decision below the threshold to `DEFER`, never to `DENY`.
-- **Inversion**: `NOT(PERMIT) = DENY`, `NOT(DENY) = PERMIT`, `NOT(DEFER) = DEFER`, `NOT(ABSTAIN) = ABSTAIN`.
-- **Decision history is append-only**: `reset_history()` must be called explicitly to clear it.
-- **Sequential confidence is monotonically non-increasing**: `c1 × c2 ≤ min(c1, c2)` for all `c1, c2 ∈ [0,1]`.
+```text
+TFIR action / policy / state objects
+                │
+                ▼
+       GUL evaluation semantics
+ decision + confidence + evidence + trace
+                │
+                ▼
+ TFIR event / receipt representation
+                │
+                ▼
+  Helmsdeep governed runtime admission
+```
+
+TFIR remains the canonical semantic object model and ABI. GUL supplies executable decision semantics that can be projected into governed runtime operations. Helmsdeep is the reference consumer direction.
+
+This relationship is architectural context; the core `gulcli` package remains local-first and has no mandatory TFIR or Helmsdeep dependency.
+
+---
+
+## Package map
+
+| Path/module | Responsibility |
+|---|---|
+| `decision.py` | Four-valued decisions, evaluated decisions, combination and inversion |
+| `confidence.py` | Bounded confidence type and composition operations |
+| `jurisdiction.py` | Hierarchical scopes, delegation, validity, and constraints |
+| `inference.py` | Logical and confidence-aware inference with traces |
+| `policy.py` | Threshold-driven governance policy evaluation and history |
+| `expr.py` | Immutable JSON-serializable policy expression DSL |
+| `facts.py` | Fact-environment bindings for runtime predicates |
+| `runtime_io.py` | JSON validation, normalization, hashing, inference, and CLI entry logic |
+| `cli_bridge.py` | Native process discovery and Python/native boundary |
+| `schemas/` | Versioned validation and inference output contracts |
+| `examples/` | Executable specifications, fact environments, and usage examples |
+| `cpp/` | Native C++17 implementation and dataset streamer |
+| `tests/` | Unit, schema, golden, dataset, and native parity tests |
+
+---
+
+## Development and verification
+
+Install the package and run the full Python test suite:
+
+```bash
+python -m pip install -e .
+python -m unittest discover -s tests -v
+```
+
+Smoke-test the executable Python boundary:
+
+```bash
+python -m gulcli validate examples/specs/basic_infer.gul.json --format json
+python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+```
+
+The GitHub runtime workflow exercises Python 3.10, 3.11, 3.12, and 3.13.
+
+Formal invariants enforced by the implementation include:
+
+- confidence is always bounded to `[0, 1]`;
+- conjunction is deny-dominant;
+- disjunction is permit-dominant;
+- `abstain` is the no-opinion identity;
+- out-of-jurisdiction evaluation returns `abstain`;
+- low-confidence threshold evaluation returns `defer`;
+- inversion preserves `defer` and `abstain`;
+- sequential confidence cannot exceed either input confidence;
+- policy decision history is append-only until explicitly reset.
+
+---
+
+## Documentation
+
+- [Runtime usage and capability matrix](docs/runtime_usage.md)
+- [v2.2.0 release specification](docs/release_notes/RELEASE_SPEC_v2_2_0.md)
+- [Project update records](docs/PROJECT_UPDATES.md)
+- [Curriculum expansion implementation specification](docs/superpowers/specs/2026-07-10-gulcli-curriculum-expansion.md)
+- [Previous full v2.2 README reference](https://github.com/torakagemusha-sudo/gulcli/blob/2c2ed05e11a1a7f3b23f1ce55cdf2068f3f50904/README.md)
+
+---
+
+## Project status
+
+GUL v2.2.0 is a beta-stage formal-policy and governed-data toolkit. The primary interfaces are executable and tested, but users should treat runtime boundaries and documented capability constraints as authoritative rather than inferring unimplemented integrations from the broader architecture.
+
+Contributions should preserve:
+
+- deterministic and inspectable semantics;
+- explicit uncertainty rather than fabricated certainty;
+- fail-closed validation at command boundaries;
+- stable result schemas and golden fixtures;
+- truthful implementation-status claims;
+- compatibility between the Python reference runtime and native surfaces.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
