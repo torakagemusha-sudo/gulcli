@@ -75,10 +75,10 @@ Validate an example policy specification:
 python -m gulcli validate examples/specs/basic_infer.gul.json --format json
 ```
 
-Run inference with the audit trace enabled:
+Run inference:
 
 ```bash
-python -m gulcli infer examples/specs/basic_infer.gul.json --format json --trace
+python -m gulcli infer examples/specs/basic_infer.gul.json --format json
 ```
 
 The example combines two permitted decisions with confidence values `0.92` and `0.81`, then applies a `0.70` threshold. The stable result is:
@@ -99,7 +99,7 @@ The example combines two permitted decisions with confidence values `0.92` and `
 }
 ```
 
-The result is not just a boolean. It records the decision, confidence, evidence, normalized-input identity, schema version, and optional trace.
+The result is not just a boolean. It records the decision, confidence, evidence, normalized-input identity, schema version, and optional trace. Add `--trace` to emit the `AND` and `THRESHOLD` inference steps.
 
 ---
 
@@ -149,7 +149,7 @@ decision = policy.evaluate(
     risk_score=0.25,
     coherence=0.90,
     confidence=Confidence(0.82),
-    context={"jurisdiction": "global.platform.production"},
+    context={"environment": "production"},
 )
 
 print(decision.decision)
@@ -196,10 +196,10 @@ from gulcli import Confidence, ConfidenceOps
 c1 = Confidence(0.90)
 c2 = Confidence(0.70)
 
-ConfidenceOps.combine_union(c1, c2)         # 0.90
-ConfidenceOps.combine_intersection(c1, c2)  # 0.70
-ConfidenceOps.combine_sequential(c1, c2)    # 0.63
-ConfidenceOps.combine_parallel(c1, c2)      # 0.97
+ConfidenceOps.combine_union(c1, c2)         # Confidence(0.9000)
+ConfidenceOps.combine_intersection(c1, c2)  # Confidence(0.7000)
+ConfidenceOps.combine_sequential(c1, c2)    # Confidence(0.6300)
+ConfidenceOps.combine_parallel(c1, c2)      # Confidence(0.9700)
 ```
 
 ### Jurisdiction
@@ -264,10 +264,12 @@ scenario/configuration/spec
             ▼
  JSON Lines governed trace records
             │
-      stdout, file, or TCP
+   stdout or TCP transport
             ▼
  training, evaluation, diagnostics
 ```
+
+Standard output can be redirected to a file for offline datasets.
 
 ---
 
